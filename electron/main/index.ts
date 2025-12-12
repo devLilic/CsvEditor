@@ -67,6 +67,12 @@ async function createWindow() {
     win.loadFile(indexHtml)
   }
 
+  // ✅ AICI ESTE LOCUL CORECT
+  // =========================
+  registerCsvHandlers(win)
+  registerSettingsHandlers()
+  // =========================
+
   // Test actively push message to the Electron-Renderer
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', new Date().toLocaleString())
@@ -101,6 +107,7 @@ app.on('second-instance', () => {
 app.on('activate', () => {
   const allWindows = BrowserWindow.getAllWindows()
   if (allWindows.length) {
+
     allWindows[0].focus()
   } else {
     createWindow()
@@ -122,4 +129,13 @@ ipcMain.handle('open-win', (_, arg) => {
   } else {
     childWindow.loadFile(indexHtml, { hash: arg })
   }
+})
+
+
+// Optional: basic global error logging
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason)
+})
+process.on('uncaughtException', (error) => {
+  console.error('[uncaughtException]', error)
 })
