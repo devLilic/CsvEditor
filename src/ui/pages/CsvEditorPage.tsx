@@ -4,18 +4,21 @@ import {
     useCsvAutosave,
 } from '@/features/csv-editor'
 
-import { EditorLayout } from '../components/layout/EditorLayout'
-import { EditorHeader } from '../components/layout/EditorHeader'
-import { EditorBody } from '../components/layout/EditorBody'
+import {EditorLayout} from '../components/layout/EditorLayout'
+import {EditorHeader} from '../components/layout/EditorHeader'
+import {EditorBody} from '../components/layout/EditorBody'
+import {EditModeProvider} from "@/ui/context/EditModeContext";
 
 export function CsvEditorPage() {
     useCsvInitialization()
-    useCsvAutosave({ debounceMs: 800 })
+    useCsvAutosave({debounceMs: 800})
 
     return (
-        <EditorLayout>
-            <EditorHeader />
-            <EditorBody />
-        </EditorLayout>
+        <EditModeProvider>
+            <EditorLayout>
+                <EditorHeader/>
+                <EditorBody/>
+            </EditorLayout>
+        </EditModeProvider>
     )
 }

@@ -5,19 +5,21 @@ import {
     useActiveEntityType,
     useOnAir,
 } from '@/features/csv-editor'
-import { EmptyState } from './common/EmptyState'
+import {EmptyState} from './common/EmptyState'
+import {useEditMode} from "@/ui/context/EditModeContext";
 
 export function EntityList() {
-    const { getEntities } = useEntities()
-    const { select, isSelected } = useSelectedEntity()
-    const { activeEntityType } = useActiveEntityType()
-    const { isOnAir, setOnAir, clearOnAir } = useOnAir()
+    const {getEntities, deleteEntity} = useEntities()
+    const {select, isSelected} = useSelectedEntity()
+    const {activeEntityType} = useActiveEntityType()
+    const {isOnAir, setOnAir, clearOnAir} = useOnAir()
+    const {editMode} = useEditMode()
 
     const items = getEntities<any>(activeEntityType)
 
     if (items.length === 0) {
         return (
-            <EmptyState text="Nu există elemente în această secțiune." />
+            <EmptyState text="Nu există elemente în această secțiune."/>
         )
     }
 
@@ -35,22 +37,37 @@ export function EntityList() {
               ${active ? 'border-l-4 border-red-600 bg-red-50' : ''}
             `}
                     >
-                        {/* TEXT */}
-                        <div className="flex flex-col overflow-hidden">
-                            {activeEntityType === 'persons' ? (
-                                <>
-                  <span className="font-medium truncate">
-                    {item.name}
-                  </span>
-                                    <span className="text-sm text-gray-600 truncate">
-                    {item.occupation}
-                  </span>
-                                </>
-                            ) : (
-                                <span className="truncate">
+                        <div className="flex gap-2 overflow-hidden">
+                            {editMode && (
+                                <button
+                                    title="Șterge"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        deleteEntity(activeEntityType, item.id)
+                                    }}
+                                    className="text-xs text-white bg-red-500 hover:bg-red-800 border px-2  rounded border-red-700"
+                                >
+                                    ✕
+                                </button>
+                            )}
+
+                            {/* TEXT */}
+                            <div className="flex flex-col overflow-hidden">
+                                {activeEntityType === 'persons' ? (
+                                    <>
+                                  <span className="font-medium truncate">
+                                    {item.name}
+                                  </span>
+                                        <span className="text-sm text-gray-600 truncate">
+                                    {item.occupation}
+                                  </span>
+                                    </>
+                                ) : (
+                                    <span className="truncate">
                   {item.title || item.location}
                 </span>
-                            )}
+                                )}
+                            </div>
                         </div>
 
                         {/* ON AIR CONTROL */}
