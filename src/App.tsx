@@ -1,12 +1,6 @@
-import './App.css'
+// src/App.tsx
+import { CsvEditorPage } from '@/ui/pages/CsvEditorPage'
 
-function App() {
-  return (
-    <div className='bg-red-500'>
-      data si unde
-
-    </div>
-  )
+export default function App() {
+    return <CsvEditorPage />
 }
-
-export default App

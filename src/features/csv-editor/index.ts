@@ -10,6 +10,8 @@ export { useCsvAutosave } from './hooks/useCsvAutosave'
 export { useEntities } from './hooks/useEntities'
 export { useSelectedEntity } from './hooks/useSelectedEntity'
 export { useQuickTitles } from './hooks/useQuickTitles'
+export { useActiveEntityType } from './hooks/useActiveEntityType'
+export { useOnAir } from './hooks/useOnAir'
 
 // context
 export { CsvProvider } from './context/CsvContext'

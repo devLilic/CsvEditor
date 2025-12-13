@@ -1,71 +1,57 @@
-// features/csv-editor/state/csv.types.ts
+import type { EntitiesState, EntityType } from '../domain/entities'
 
-import {createEmptyEntitiesState, EntitiesState, EntityType} from '../domain/entities'
-
-/**
- * Entitate selectată (referință stabilă)
- */
 export interface SelectedEntity {
     type: EntityType
     id: string
 }
 
-/**
- * Starea globală CSV Editor
- * ❌ Fără Electron
- * ❌ Fără CSV
- * ❌ Fără side-effects
- */
+export type OnAirMap = Partial<Record<EntityType, string>>
+
 export interface CsvState {
     entities: EntitiesState
     isLoaded: boolean
     selected: SelectedEntity | null
+    activeEntityType: EntityType
+
+    // 🆕 ON AIR state
+    onAir: OnAirMap
 }
 
-/**
- * Stare inițială (goală)
- */
 export const initialCsvState: CsvState = {
-    entities: createEmptyEntitiesState(),
+    entities: {
+        persons: [],
+        titles: [],
+        locations: [],
+        hotTitles: [],
+        waitTitles: [],
+        waitLocations: [],
+    },
     isLoaded: false,
     selected: null,
+    activeEntityType: 'titles',
+
+    // 🆕
+    onAir: {},
 }
 
-/**
- * Tipuri de acțiuni permise
- */
 export type CsvAction =
-    | {
-    type: 'CSV_LOADED'
-    payload: EntitiesState
-}
+    | { type: 'CSV_LOADED'; payload: EntitiesState }
     | {
     type: 'ENTITY_ADD'
-    payload: {
-        entityType: EntityType
-        data: any
-    }
+    payload: { entityType: EntityType; data: Record<string, unknown> }
 }
     | {
     type: 'ENTITY_UPDATE'
-    payload: {
-        entityType: EntityType
-        id: string
-        data: any
-    }
+    payload: { entityType: EntityType; id: string; data: Record<string, unknown> }
 }
     | {
     type: 'ENTITY_DELETE'
-    payload: {
-        entityType: EntityType
-        id: string
-    }
+    payload: { entityType: EntityType; id: string }
 }
-    | {
-    type: 'ENTITY_CLEAR_ALL'
-    payload: EntitiesState
-}
-    | {
-    type: 'SELECT_ENTITY'
-    payload: SelectedEntity | null
-}
+    | { type: 'ENTITY_CLEAR_ALL'; payload: EntitiesState }
+    | { type: 'SELECT_ENTITY'; payload: SelectedEntity | null }
+    | { type: 'SET_ACTIVE_ENTITY_TYPE'; payload: EntityType }
+
+    // 🆕 ON AIR
+    | { type: 'SET_ON_AIR'; payload: { type: EntityType; id: string } }
+    | { type: 'CLEAR_ON_AIR'; payload: { type: EntityType } }
