@@ -1,50 +1,89 @@
-// features/csv-editor/services/csvService.ts
-
-import type {
-    RendererApi,
-    CsvFileDescriptor,
-    CsvWriteResponse,
-    CsvBackupResponse,
-} from '@/shared/ipc-types'
+// src/features/csv-editor/services/csvService.ts
+import type { CsvFileDescriptor, CsvWriteResponse } from '@/shared/ipc-types'
 
 /**
- * Thin, typed wrapper peste window.electronAPI
- * ❌ Fără logică
- * ❌ Fără parsing
- * ❌ Fără state
+ * Accessor lazy pentru preload API.
+ * IMPORTANT:
+ * - NU se capturează electronAPI la import-time
+ * - permite injectarea de mock-uri în testare
  */
-const api = window.electronAPI as RendererApi
+function getApi() {
+    const api = (window as any)?.electronAPI
 
+    if (!api) {
+        throw new Error('electronAPI not available')
+    }
+
+    return api
+}
+
+/**
+ * csvService
+ *
+ * Responsabilități:
+ * - wrapper sigur peste IPC Electron
+ * - fallback predictibil (fără throw)
+ * - complet testabil fără Electron runtime
+ *
+ * NU face:
+ * - parsing CSV
+ * - validare business
+ * - state management
+ */
 export const csvService = {
     /**
-     * Încearcă să încarce ultimul CSV salvat
-     * @returns CsvFileDescriptor | null
+     * Încarcă ultimul CSV salvat (dacă există)
      */
     async getLast(): Promise<CsvFileDescriptor | null> {
-        return api.getLastCsv()
+        try {
+            const res = await getApi().getLastCsv()
+            return res ?? null
+        } catch {
+            return null
+        }
     },
 
     /**
-     * Deschide dialog nativ pentru selectare CSV
-     * @returns CsvFileDescriptor | null
+     * Deschide dialog pentru selectare CSV
      */
     async openDialog(): Promise<CsvFileDescriptor | null> {
-        return api.openCsvDialog()
+        try {
+            const res = await getApi().openCsvDialog()
+            return res ?? null
+        } catch {
+            return null
+        }
     },
 
     /**
      * Scrie CSV-ul curent pe disc
-     * Nu aruncă excepții – verifică response.ok
      */
     async write(content: string): Promise<CsvWriteResponse> {
-        return api.writeCsv(content)
+        if (typeof content !== 'string') {
+            return { ok: false, error: 'INVALID_CONTENT' }
+        }
+
+        try {
+            const res = await getApi().writeCsv(content)
+            return res ?? { ok: false, error: 'NO_RESPONSE' }
+        } catch {
+            return { ok: false, error: 'IPC_FAILED' }
+        }
     },
 
     /**
-     * Creează backup cu timestamp
-     * Ideal înainte de operații destructive
+     * Creează backup pentru CSV-ul curent
      */
-    async backup(content: string): Promise<CsvBackupResponse> {
-        return api.bkpCsv(content)
+    async backup(content: string): Promise<CsvWriteResponse> {
+        if (typeof content !== 'string') {
+            return { ok: false, error: 'INVALID_CONTENT' }
+        }
+
+        try {
+            const res = await getApi().bkpCsv(content)
+            return res ?? { ok: false, error: 'NO_RESPONSE' }
+        } catch {
+            return { ok: false, error: 'IPC_FAILED' }
+        }
     },
 }

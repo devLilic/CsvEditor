@@ -35,9 +35,8 @@ export function QuickTitlesBar({
             <div className="flex gap-2">
                 {/* QuickTitle buttons */}
                 {quickTitles.map((qt) => (
-                    <div className="flex rounded-lg border border-blue-700 overflow-hidden">
+                    <div className="flex rounded-lg border border-blue-700 overflow-hidden" key={qt}>
                         <button
-                            key={qt}
                             onClick={() => {
                                 onApplyPrefix(qt)
                                 focusEditor()

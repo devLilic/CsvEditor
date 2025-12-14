@@ -1,4 +1,4 @@
-import type { EntitiesState, EntityType } from '../domain/entities'
+import type {EntitiesState, EntityType} from '../domain/entities'
 
 export interface SelectedEntity {
     type: EntityType
@@ -37,21 +37,19 @@ export const initialCsvState: CsvState = {
 export type CsvAction =
     | { type: 'CSV_LOADED'; payload: EntitiesState }
     | {
-    type: 'ENTITY_ADD'
-    payload: { entityType: EntityType; data: Record<string, unknown> }
-}
+        type: 'ENTITY_ADD'
+        payload: { entityType: EntityType; data: Record<string, unknown> }
+    }
     | {
-    type: 'ENTITY_UPDATE'
-    payload: { entityType: EntityType; id: string; data: Record<string, unknown> }
-}
+        type: 'ENTITY_UPDATE'
+        payload: { entityType: EntityType; id: string; data: Record<string, unknown> }
+    }
     | {
-    type: 'ENTITY_DELETE'
-    payload: { entityType: EntityType; id: string }
-}
+        type: 'ENTITY_DELETE'
+        payload: { entityType: EntityType; id: string }
+    }
     | { type: 'ENTITY_CLEAR_ALL'; payload: EntitiesState }
     | { type: 'SELECT_ENTITY'; payload: SelectedEntity | null }
     | { type: 'SET_ACTIVE_ENTITY_TYPE'; payload: EntityType }
-
-    // 🆕 ON AIR
     | { type: 'SET_ON_AIR'; payload: { type: EntityType; id: string } }
     | { type: 'CLEAR_ON_AIR'; payload: { type: EntityType } }

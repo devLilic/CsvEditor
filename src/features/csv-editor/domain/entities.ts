@@ -1,16 +1,21 @@
 // features/csv-editor/domain/entities.ts
 
+
+export const EntityTypes = {
+    PERSONS: 'persons',
+    TITLES: 'titles',
+    LOCATIONS: 'locations',
+    HOT_TITLES: 'hotTitles',
+    WAIT_TITLES: 'waitTitles',
+    WAIT_LOCATIONS: 'waitLocations',
+} as const
+
 /**
  * Tipurile de entități suportate de CSV Editor
  * (chei folosite peste tot: reducer, hooks, UI)
  */
-export type EntityType =
-    | 'persons'
-    | 'titles'
-    | 'locations'
-    | 'hotTitles'
-    | 'waitTitles'
-    | 'waitLocations'
+export type EntityType = typeof EntityTypes[keyof typeof EntityTypes]
+
 
 /**
  * Bază comună pentru toate entitățile

@@ -100,6 +100,15 @@ export function csvReducer(state: CsvState, action: CsvAction): CsvState {
             }
         }
 
+        case 'SET_SELECTED':
+            return {
+                ...state,
+                selected: action.payload,
+                activeEntityType:
+                    action.payload?.type ?? state.activeEntityType,
+            }
+
+
         default:
             return state
     }

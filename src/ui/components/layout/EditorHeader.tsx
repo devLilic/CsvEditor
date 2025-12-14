@@ -4,6 +4,7 @@ import { useEntities } from '@/features/csv-editor'
 import { createEmptyEntitiesState } from '@/features/csv-editor'
 import { ConfirmDialog } from '../common/ConfirmDialog'
 import {EditModeToggle} from "@/ui/components/EditModeToggle";
+import { Link } from 'react-router-dom'
 
 export function EditorHeader() {
     const { clearAll } = useEntities()
@@ -13,6 +14,14 @@ export function EditorHeader() {
             <Tabs />
             <div className="flex gap-2">
                 <EditModeToggle/>
+
+                <Link
+                    to="/template-editor"
+                    className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                >
+                    Template Editor
+                </Link>
+
 
                 <ConfirmDialog
                     title="Ștergi tot conținutul?"
