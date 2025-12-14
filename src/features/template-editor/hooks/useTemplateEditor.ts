@@ -17,8 +17,8 @@ export function createDefaultTemplate(partial?: Partial<Template>): Template {
         id: partial?.id ?? uuidv4(),
         name: partial?.name ?? 'New Template',
         canvas: {
-            width: partial?.canvas?.width ?? 1920,
-            height: partial?.canvas?.height ?? 1080,
+            width: partial?.canvas?.width ?? 1280,
+            height: partial?.canvas?.height ?? 720,
             background: partial?.canvas?.background ?? { type: 'color', value: '#000000' },
         },
         layers: partial?.layers ?? [],
@@ -114,8 +114,11 @@ export function useTemplateEditor(initial?: Template) {
         dispatch({ type: 'RESIZE_LAYER', payload: { id, width, height } })
     }, [])
 
-    const reorderLayer = useCallback((id: string, zIndex: number) => {
-        dispatch({ type: 'REORDER_LAYER', payload: { id, zIndex } })
+    const reorderLayer = useCallback((id: string, toIndex: number) => {
+        dispatch({
+            type: 'REORDER_LAYER',
+            payload: { id, toIndex },
+        })
     }, [])
 
     const setBackground = useCallback((background: Background) => {

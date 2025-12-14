@@ -1,58 +1,21 @@
 // src/features/template-editor/state/template.reducer.ts
 
-import type { Layer, Template } from '../domain/template.types'
-import type { LayerPatch, TemplateEditorAction, TemplateEditorState } from './template.types'
+import type { Layer } from '../domain/template.types'
+import type {
+    LayerPatch,
+    TemplateEditorAction,
+    TemplateEditorState,
+} from './template.types'
 
-function assertNever(x: never): never {
-    throw new Error(`Unexpected object: ${String(x)}`)
+function normalizeLayers(layers: Layer[]): Layer[] {
+    return layers.map((layer, index) => ({
+        ...layer,
+        zIndex: index,
+    }))
 }
 
-function sortLayers(layers: Layer[]): Layer[] {
-    return [...layers].sort((a, b) => a.zIndex - b.zIndex)
-}
-
-function clamp(n: number, min: number, max: number) {
-    return Math.max(min, Math.min(max, n))
-}
-
-function mergeLayer(layer: Layer, patch: LayerPatch): Layer {
-    // Type safety: patch.type must match layer.type (caller ensures)
-    if (layer.type === 'rectangle') {
-        if (patch.type !== 'rectangle') return layer
-        return {
-            ...layer,
-            ...patch,
-            fill: patch.fill ? patch.fill : layer.fill,
-            width: patch.width ?? layer.width,
-            height: patch.height ?? layer.height,
-            x: patch.x ?? layer.x,
-            y: patch.y ?? layer.y,
-            rotation: patch.rotation ?? layer.rotation,
-            opacity: patch.opacity ?? layer.opacity,
-            zIndex: patch.zIndex ?? layer.zIndex,
-            visible: patch.visible ?? layer.visible,
-        }
-    }
-
-    if (layer.type === 'text') {
-        if (patch.type !== 'text') return layer
-        return {
-            ...layer,
-            ...patch,
-            binding: patch.binding ?? layer.binding,
-            textStyle: patch.textStyle ? { ...layer.textStyle, ...patch.textStyle } : layer.textStyle,
-            width: patch.width ?? layer.width,
-            height: patch.height ?? layer.height,
-            x: patch.x ?? layer.x,
-            y: patch.y ?? layer.y,
-            rotation: patch.rotation ?? layer.rotation,
-            opacity: patch.opacity ?? layer.opacity,
-            zIndex: patch.zIndex ?? layer.zIndex,
-            visible: patch.visible ?? layer.visible,
-        }
-    }
-
-    return assertNever(layer)
+function clampIndex(index: number, length: number) {
+    return Math.max(0, Math.min(index, length))
 }
 
 export function templateEditorReducer(
@@ -61,93 +24,134 @@ export function templateEditorReducer(
 ): TemplateEditorState {
     switch (action.type) {
         case 'SET_TEMPLATE': {
-            const next: Template = action.payload
-            return { template: next, selectedLayerId: null }
+            return {
+                template: {
+                    ...action.payload,
+                    layers: normalizeLayers(action.payload.layers ?? []),
+                },
+                selectedLayerId: null,
+            }
         }
 
-        case 'SELECT_LAYER': {
+        case 'SELECT_LAYER':
             return { ...state, selectedLayerId: action.payload }
-        }
 
         case 'ADD_LAYER': {
-            const layers = sortLayers([...state.template.layers, action.payload])
+            const layers = normalizeLayers([
+                ...state.template.layers,
+                action.payload,
+            ])
+
             return {
                 ...state,
                 template: { ...state.template, layers },
-                selectedLayerId: action.select ? action.payload.id : state.selectedLayerId,
+                selectedLayerId: action.select
+                    ? action.payload.id
+                    : state.selectedLayerId,
             }
         }
 
         case 'DELETE_LAYER': {
-            const { id } = action.payload
-            const layers = state.template.layers.filter((l) => l.id !== id)
+            const layers = normalizeLayers(
+                state.template.layers.filter((l) => l.id !== action.payload.id)
+            )
+
             return {
                 ...state,
-                template: { ...state.template, layers: sortLayers(layers) },
-                selectedLayerId: state.selectedLayerId === id ? null : state.selectedLayerId,
+                template: { ...state.template, layers },
+                selectedLayerId:
+                    state.selectedLayerId === action.payload.id
+                        ? null
+                        : state.selectedLayerId,
             }
         }
 
         case 'UPDATE_LAYER': {
             const { id, patch } = action.payload
-            const layers = state.template.layers.map((l) => {
-                if (l.id !== id) return l
-                if (l.type !== patch.type) return l
-                return mergeLayer(l, patch)
-            })
-            return { ...state, template: { ...state.template, layers: sortLayers(layers) } }
+
+            const layers = normalizeLayers(
+                state.template.layers.map((l) =>
+                    l.id === id && l.type === patch.type
+                        ? {
+                            ...l,
+                            ...patch,
+                            ...(patch.type === 'text'
+                                ? { textStyle: { ...l.textStyle, ...patch.textStyle } }
+                                : {}),
+                        }
+                        : l
+                )
+            )
+
+            return { ...state, template: { ...state.template, layers } }
         }
 
         case 'MOVE_LAYER': {
             const { id, x, y } = action.payload
-            const layers = state.template.layers.map((l) =>
-                l.id === id ? { ...l, x, y } : l
+            const layers = normalizeLayers(
+                state.template.layers.map((l) =>
+                    l.id === id ? { ...l, x, y } : l
+                )
             )
-            return { ...state, template: { ...state.template, layers: sortLayers(layers) } }
+            return { ...state, template: { ...state.template, layers } }
         }
 
         case 'RESIZE_LAYER': {
             const { id, width, height } = action.payload
-            const layers = state.template.layers.map((l) =>
-                l.id === id
-                    ? { ...l, width: clamp(width, 1, 100000), height: clamp(height, 1, 100000) }
-                    : l
+            const layers = normalizeLayers(
+                state.template.layers.map((l) =>
+                    l.id === id ? { ...l, width, height } : l
+                )
             )
-            return { ...state, template: { ...state.template, layers: sortLayers(layers) } }
+            return { ...state, template: { ...state.template, layers } }
         }
 
+        // 🔥 CANONIC: reorder by array index
         case 'REORDER_LAYER': {
-            const { id, zIndex } = action.payload
-            const layers = state.template.layers.map((l) =>
-                l.id === id ? { ...l, zIndex } : l
-            )
-            return { ...state, template: { ...state.template, layers: sortLayers(layers) } }
-        }
+            const { id, toIndex } = action.payload
+            const layers = [...state.template.layers]
+            const fromIndex = layers.findIndex((l) => l.id === id)
+            if (fromIndex === -1) return state
 
-        case 'SET_BACKGROUND': {
+            const clamped = clampIndex(toIndex, layers.length - 1)
+            const [moved] = layers.splice(fromIndex, 1)
+            layers.splice(clamped, 0, moved)
+
             return {
                 ...state,
                 template: {
                     ...state.template,
-                    canvas: { ...state.template.canvas, background: action.payload },
+                    layers: normalizeLayers(layers),
                 },
             }
         }
 
-        case 'PATCH_CANVAS': {
-            const patch = action.payload
+        case 'SET_BACKGROUND':
             return {
                 ...state,
                 template: {
                     ...state.template,
                     canvas: {
                         ...state.template.canvas,
-                        ...patch,
-                        background: patch.background ?? state.template.canvas.background,
+                        background: action.payload,
                     },
                 },
             }
-        }
+
+        case 'PATCH_CANVAS':
+            return {
+                ...state,
+                template: {
+                    ...state.template,
+                    canvas: {
+                        ...state.template.canvas,
+                        ...action.payload,
+                        background:
+                            action.payload.background ??
+                            state.template.canvas.background,
+                    },
+                },
+            }
 
         default:
             return state

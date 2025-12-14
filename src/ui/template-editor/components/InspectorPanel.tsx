@@ -1,12 +1,12 @@
 // src/ui/template-editor/components/InspectorPanel.tsx
 
-import { useTemplateEditor } from '@/features/template-editor'
 import type {
     Layer,
     RectangleLayer,
     TextLayer,
 } from '@/features/template-editor/domain/template.types'
-import {BackgroundSection} from "@/ui/template-editor/components/BacgroundSection";
+import {BackgroundEditor} from "@/ui/template-editor/components/BackgroundEditor";
+import {useTemplateEditorContext} from "@/features/template-editor/context/TemplateEditorContext";
 
 /* ======================================================
    UI helpers (pure, dumb)
@@ -66,7 +66,7 @@ export function InspectorPanel() {
         selectedLayerId,
         updateLayer,
         deleteLayer,
-    } = useTemplateEditor()
+    } = useTemplateEditorContext()
 
     /* ---------- Helpers CANONICI (per layer type) ---------- */
 
@@ -272,7 +272,7 @@ export function InspectorPanel() {
             <div className="mt-auto text-xs text-gray-500">
                 Drag pentru mutare · Colțuri pentru resize
             </div>
-            <BackgroundSection/>
+            <BackgroundEditor/>
         </div>
     )
 }

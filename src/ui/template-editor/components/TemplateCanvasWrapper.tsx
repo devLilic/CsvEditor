@@ -1,11 +1,11 @@
 // src/ui/template-editor/components/TemplateCanvasWrapper.tsx
 
 import { useEffect, useRef, useState } from 'react'
-import { useTemplateEditor } from '@/features/template-editor'
 import { TemplateCanvas } from './TemplateCanvas'
+import {useTemplateEditorContext} from "@/features/template-editor";
 
 export function TemplateCanvasWrapper() {
-    const { template } = useTemplateEditor()
+    const { template } = useTemplateEditorContext()
     const containerRef = useRef<HTMLDivElement>(null)
     const [scale, setScale] = useState(1)
 
@@ -31,8 +31,9 @@ export function TemplateCanvasWrapper() {
     }, [width, height])
 
     return (
-        <div ref={containerRef} className="w-full h-full flex items-center justify-center">
+        <div ref={containerRef} className="w-full h-full flex items-center justify-center ">
             <div
+                className="bg-gray-200"
                 style={{
                     width,
                     height,

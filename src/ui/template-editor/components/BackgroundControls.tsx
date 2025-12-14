@@ -1,8 +1,8 @@
 // src/ui/template-editor/components/BackgroundControls.tsx
-import { useTemplateEditor } from '@/features/template-editor'
+import {useTemplateEditorContext} from '@/features/template-editor'
 
 export function BackgroundControls() {
-    const { template, setBackground, patchCanvas } = useTemplateEditor()
+    const { template, setBackground, patchCanvas } = useTemplateEditorContext()
     const bg = template.canvas.background
 
     return (

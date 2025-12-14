@@ -1,67 +1,61 @@
 // src/ui/template-editor/components/TemplateCanvas.tsx
 
-import { Stage, Layer as KonvaLayer, Rect, Image as KonvaImage } from 'react-konva'
-import { useTemplateEditor } from '@/features/template-editor'
-import useImage from 'use-image'
+import { Stage, Layer as KonvaLayer } from 'react-konva'
+import { useTemplateEditorContext } from '@/features/template-editor'
+import {RectangleNode} from "@/ui/template-editor/components/nodes/RectangleNode";
+import {TextNode} from "@/ui/template-editor/components/nodes/TextNode";
 
 export function TemplateCanvas() {
-
     const {
         template,
         selectedLayerId,
         selectLayer,
         moveLayer,
-    } = useTemplateEditor()
-
-    const { canvas, layers } = template
-    console.log('LAYERS', layers)
-
-    const [bgImage] =
-        canvas.background.type === 'image'
-            ? useImage(canvas.background.value)
-            : [null]
+    } = useTemplateEditorContext()
 
     return (
         <Stage
-            width={canvas.width}
-            height={canvas.height}
-            onMouseDown={(e) => {
-                if (e.target === e.target.getStage()) {
-                    selectLayer(null)
-                }
+            width={template.canvas.width}
+            height={template.canvas.height}
+            style={{
+                background:
+                    template.canvas.background.type === 'color'
+                        ? template.canvas.background.value
+                        : `url(${template.canvas.background.value}) center / cover no-repeat`,
             }}
         >
             <KonvaLayer>
-                {/* BACKGROUND COLOR */}
-                {canvas.background.type === 'color' && (
-                    <Rect
-                        x={0}
-                        y={0}
-                        width={canvas.width}
-                        height={canvas.height}
-                        fill={canvas.background.value}
-                        listening={false}
-                    />
-                )}
-
-                {/* BACKGROUND IMAGE */}
-                {canvas.background.type === 'image' && bgImage && (
-                    <KonvaImage
-                        image={bgImage}
-                        x={0}
-                        y={0}
-                        width={canvas.width}
-                        height={canvas.height}
-                        listening={false}
-                    />
-                )}
-
-                {/* LAYERS */}
-                {layers.map((layer) => {
+                {template.layers.map(layer => {
                     if (!layer.visible) return null
-                    // layer rendering (rectangle / text) rămâne neschimbat
+
+                    if (layer.type === 'rectangle') {
+                        return (
+                            <RectangleNode
+                                key={layer.id}
+                                layer={layer}
+                                selected={layer.id === selectedLayerId}
+                                onSelect={() => selectLayer(layer.id)}
+                                onMove={(x, y) => moveLayer(layer.id, x, y)}
+                            />
+                        )
+                    }
+
+                    if (layer.type === 'text') {
+                        return (
+                            <TextNode
+                                key={layer.id}
+                                layer={layer}
+                                selected={layer.id === selectedLayerId}
+                                onSelect={() => selectLayer(layer.id)}
+                                onMove={(x, y) =>
+                                    moveLayer(layer.id, x, y)
+                                }
+                            />
+                        )
+                    }
                     return null
                 })}
+
             </KonvaLayer>
         </Stage>
     )
