@@ -7,7 +7,7 @@ import {EditModeToggle} from "@/ui/components/EditModeToggle";
 import { Link } from 'react-router-dom'
 
 export function EditorHeader() {
-    const { clearAll } = useEntities()
+    const { clearAll, loadCsv } = useEntities()
 
     return (
         <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
@@ -15,13 +15,12 @@ export function EditorHeader() {
             <div className="flex gap-2">
                 <EditModeToggle/>
 
-                <Link
-                    to="/template-editor"
-                    className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                <button
+                    onClick={loadCsv}
+                    className="bg-blue-600 text-white px-4 py-1 rounded"
                 >
-                    Template Editor
-                </Link>
-
+                    Load CSV
+                </button>
 
                 <ConfirmDialog
                     title="Ștergi tot conținutul?"

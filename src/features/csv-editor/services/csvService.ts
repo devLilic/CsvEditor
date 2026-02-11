@@ -1,5 +1,5 @@
 // src/features/csv-editor/services/csvService.ts
-import type { CsvFileDescriptor, CsvWriteResponse } from '@/shared/ipc-types'
+import type { CsvFileDescriptor, CsvWriteResponse, CsvBackupResponse } from '@/shared/ipc-types'
 
 /**
  * Accessor lazy pentru preload API.
@@ -74,7 +74,7 @@ export const csvService = {
     /**
      * Creează backup pentru CSV-ul curent
      */
-    async backup(content: string): Promise<CsvWriteResponse> {
+    async backup(content: string): Promise<CsvBackupResponse> {
         if (typeof content !== 'string') {
             return { ok: false, error: 'INVALID_CONTENT' }
         }

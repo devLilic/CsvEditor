@@ -104,8 +104,6 @@ export function csvReducer(state: CsvState, action: CsvAction): CsvState {
             return {
                 ...state,
                 selected: action.payload,
-                activeEntityType:
-                    action.payload?.type ?? state.activeEntityType,
             }
 
 

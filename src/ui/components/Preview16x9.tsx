@@ -17,12 +17,13 @@ export function Preview16x9({
                                 entityType,
                             }: PreviewProps) {
     return (
-        <div className="relative aspect-video bg-black rounded overflow-hidden flex items-center justify-center">
-      <span className="absolute top-2 left-2 text-xs text-white opacity-60">
-        PREVIEW – {entityType.toUpperCase()}
-      </span>
+        <div className="relative w-[1000px] h-[200px] bg-black rounded overflow-x-auto flex mx-auto items-center justify-center">
+            {/*<div className="relative aspect-video bg-black rounded overflow-hidden flex items-center justify-center">*/}
+              <span className="absolute top-2 left-2 text-xs text-white opacity-60">
+                PREVIEW – {entityType.toUpperCase()}
+              </span>
 
-            <div className="w-full px-6 text-white">
+            <div className="w-full px-6 text-white text-3xl mr-4">
                 {content ?? (
                     <span className="opacity-40">
             Preview

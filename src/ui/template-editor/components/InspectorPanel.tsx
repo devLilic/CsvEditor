@@ -84,6 +84,7 @@ export function InspectorPanel() {
         layer: TextLayer,
         patch: TextLayerPatch
     ) => {
+        // @ts-ignore
         updateLayer(layer.id, {
             type: 'text',
             ...patch,

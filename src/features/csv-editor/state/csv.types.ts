@@ -53,3 +53,4 @@ export type CsvAction =
     | { type: 'SET_ACTIVE_ENTITY_TYPE'; payload: EntityType }
     | { type: 'SET_ON_AIR'; payload: { type: EntityType; id: string } }
     | { type: 'CLEAR_ON_AIR'; payload: { type: EntityType } }
+    | { type: 'SET_SELECTED'; payload: SelectedEntity | null }

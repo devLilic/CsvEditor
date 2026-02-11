@@ -245,7 +245,7 @@ export function EntityEditor() {
 
 
     return (
-        <div className="bg-white rounded border p-4 flex flex-col gap-4">
+        <div className="bg-white rounded border p-4 flex flex-col gap-4 max-w-[100%]">
             <Preview16x9
                 entityType={activeEntityType}
                 content={previewContent}
@@ -345,11 +345,6 @@ export function EntityEditor() {
                     />
                 </div>
             )}
-
-
-
-
-
         </div>
     )
 }

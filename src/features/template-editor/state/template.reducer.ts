@@ -66,25 +66,25 @@ export function templateEditorReducer(
             }
         }
 
-        case 'UPDATE_LAYER': {
-            const { id, patch } = action.payload
-
-            const layers = normalizeLayers(
-                state.template.layers.map((l) =>
-                    l.id === id && l.type === patch.type
-                        ? {
-                            ...l,
-                            ...patch,
-                            ...(patch.type === 'text'
-                                ? { textStyle: { ...l.textStyle, ...patch.textStyle } }
-                                : {}),
-                        }
-                        : l
-                )
-            )
-
-            return { ...state, template: { ...state.template, layers } }
-        }
+        // case 'UPDATE_LAYER': {
+        //     const { id, patch } = action.payload
+        //
+        //     const layers = normalizeLayers(
+        //         state.template.layers.map((l) =>
+        //             l.id === id && l.type === patch.type
+        //                 ? {
+        //                     ...l,
+        //                     ...patch,
+        //                     ...(patch.type === 'text'
+        //                         ? { textStyle: { ...l.textStyle, ...patch.textStyle } }
+        //                         : {}),
+        //                 }
+        //                 : l
+        //         )
+        //     )
+        //
+        //     return { ...state, template: { ...state.template, layers } }
+        // }
 
         case 'MOVE_LAYER': {
             const { id, x, y } = action.payload

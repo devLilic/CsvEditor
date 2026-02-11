@@ -4,6 +4,8 @@ import { useCallback } from 'react'
 import { useCsvContext } from '../context/CsvContext'
 import type { EntityType } from '../domain/entities'
 import type { SelectedEntity } from '../state/csv.types'
+import { csvService } from '../services/csvService'
+import { parseCsv } from '../utils/csvParser'
 
 /**
  * CRUD logic pentru entități
@@ -78,8 +80,20 @@ export function useEntities() {
                 payload: nextStateEntities,
             })
         },
-        [dispatch, state.entities]
+        [dispatch]
     )
+
+    // -------- LOAD CSV --------
+    const loadCsv = useCallback(async () => {
+        const opened = await csvService.openDialog()
+        if (opened?.content) {
+            const entities = parseCsv(opened.content)
+            dispatch({
+                type: 'CSV_LOADED',
+                payload: entities,
+            })
+        }
+    }, [dispatch])
 
     return {
         // state
@@ -93,5 +107,6 @@ export function useEntities() {
         updateEntity,
         deleteEntity,
         clearAll,
+        loadCsv,
     }
 }

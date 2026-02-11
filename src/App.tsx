@@ -1,12 +1,12 @@
 // src/App.tsx
 
-import {BrowserRouter, Routes, Route, Navigate} from 'react-router-dom'
+import {HashRouter, Routes, Route, Navigate} from 'react-router-dom'
 import {CsvEditorPage} from '@/ui/pages/CsvEditorPage'
 import TemplateEditorPage from '@/ui/pages/TemplateEditorPage'
 
 export default function App() {
     return (
-        <BrowserRouter>
+        <HashRouter>
             <Routes>
                 <Route path="/" element={<Navigate to="/csv-editor" replace/>}/>
 
@@ -17,6 +17,6 @@ export default function App() {
                     element={<TemplateEditorPage/>}
                 />
             </Routes>
-        </BrowserRouter>
+        </HashRouter>
     )
 }
