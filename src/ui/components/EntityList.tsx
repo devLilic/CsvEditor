@@ -32,9 +32,9 @@ export function EntityList() {
                     <div
                         key={item.id}
                         onClick={() => select(activeEntityType, item.id)}
-                        className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-3
+                        className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-3 border-l-4 
               ${isSelected(activeEntityType, item.id) ? 'bg-blue-100' : 'hover:bg-gray-100'}
-              ${active ? 'border-l-4 border-red-600 bg-red-50' : ''}
+              ${active ? 'border-red-600 bg-red-50' : ''}
             `}
                     >
                         <div className="flex gap-2 overflow-hidden">
@@ -52,7 +52,7 @@ export function EntityList() {
                             )}
 
                             {/* TEXT */}
-                            <div className="flex flex-col overflow-hidden">
+                            <div className="flex flex-col overflow-hidden font-bold ">
                                 {activeEntityType === 'persons' ? (
                                     <>
                                   <span className="font-medium truncate">
@@ -74,15 +74,15 @@ export function EntityList() {
                         <div className="flex items-center gap-2 shrink-0">
                             {active ? (
                                 <>
-                  <span className="text-xs font-semibold text-red-600">
-                    ● ON AIR
-                  </span>
+                                  <span className="text-xs font-semibold text-red-600">
+                                    ● ON AIR
+                                  </span>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             clearOnAir(activeEntityType)
                                         }}
-                                        className="text-xs px-2 py-1 rounded bg-gray-200 hover:bg-gray-300"
+                                        className="text-xs px-2 py-1 rounded border border-gray-500 bg-gray-200 hover:bg-gray-300"
                                     >
                                         STOP
                                     </button>
