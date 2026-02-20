@@ -9,9 +9,7 @@ import { parseCsv } from '../utils/csvParser'
 
 /**
  * CRUD logic pentru entități
- * ❌ Fără Electron
- * ❌ Fără CSV
- * ❌ Fără side-effects
+ * ❌ Fără Electron direct (doar prin servicii)
  *
  * UI consumă DOAR acest hook.
  */
@@ -21,7 +19,7 @@ export function useEntities() {
     // -------- READ --------
     const getEntities = useCallback(
         <T = unknown>(type: EntityType): T[] => {
-            return state.entities[type] as T[]
+            return state.entities[type] as unknown as T[]
         },
         [state.entities]
     )
@@ -72,6 +70,27 @@ export function useEntities() {
         [dispatch]
     )
 
+    // -------- TITLES: DELIMITER OPS --------
+    const addDelimiterAfterTitle = useCallback(
+        (titleId: string) => {
+            dispatch({
+                type: 'TITLE_ADD_DELIMITER_AFTER',
+                payload: { titleId },
+            })
+        },
+        [dispatch]
+    )
+
+    const deleteDelimiter = useCallback(
+        (delimiterId: string) => {
+            dispatch({
+                type: 'TITLE_DELETE_DELIMITER',
+                payload: { delimiterId },
+            })
+        },
+        [dispatch]
+    )
+
     // -------- CLEAR ALL --------
     const clearAll = useCallback(
         (nextStateEntities: typeof state.entities) => {
@@ -106,6 +125,8 @@ export function useEntities() {
         addEntity,
         updateEntity,
         deleteEntity,
+        addDelimiterAfterTitle,
+        deleteDelimiter,
         clearAll,
         loadCsv,
     }

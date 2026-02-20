@@ -1,6 +1,5 @@
 // features/csv-editor/domain/entities.ts
 
-
 export const EntityTypes = {
     PERSONS: 'persons',
     TITLES: 'titles',
@@ -16,7 +15,6 @@ export const EntityTypes = {
  */
 export type EntityType = typeof EntityTypes[keyof typeof EntityTypes]
 
-
 /**
  * Bază comună pentru toate entitățile
  */
@@ -25,28 +23,54 @@ export interface BaseEntity {
 }
 
 /**
+ * Entități care pot fi aliniate pe rânduri CSV.
+ * rowIndex este 0-based (index de rând în CSV).
+ */
+export interface RowIndexed {
+    rowIndex?: number
+}
+
+/**
  * PERSON
  * CSV: Nume / Functie
  */
-export interface Person extends BaseEntity {
+export interface Person extends BaseEntity, RowIndexed {
     name: string
     occupation: string
 }
 
 /**
- * TITLE
- * CSV: Titlu
+ * TITLE schema nouă:
+ * - CSV col1: Nr (derivat la export)
+ * - CSV col2: Titlu (text)
+ *
+ * În state, titles poate conține și delimiters (rând complet gol în CSV).
  */
-export interface Title extends BaseEntity {
+export interface TitleRow extends BaseEntity, RowIndexed {
+    kind: 'title'
     title: string
 }
+
+export interface TitleDelimiter extends BaseEntity, RowIndexed {
+    kind: 'delimiter'
+}
+
+export type TitleItem = TitleRow | TitleDelimiter
 
 /**
  * LOCATION
  * CSV: Locatie
  */
-export interface Location extends BaseEntity {
+export interface Location extends BaseEntity, RowIndexed {
     location: string
+}
+
+/**
+ * Refolosim modelul Title simplu pentru hotTitles/waitTitles
+ * (nu au delimiter logic).
+ */
+export interface SimpleTitle extends BaseEntity, RowIndexed {
+    title: string
 }
 
 /**
@@ -55,10 +79,10 @@ export interface Location extends BaseEntity {
  */
 export interface EntitiesState {
     persons: Person[]
-    titles: Title[]
+    titles: TitleItem[]
     locations: Location[]
-    hotTitles: Title[]
-    waitTitles: Title[]
+    hotTitles: SimpleTitle[]
+    waitTitles: SimpleTitle[]
     waitLocations: Location[]
 }
 

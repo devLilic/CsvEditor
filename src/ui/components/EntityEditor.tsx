@@ -46,6 +46,22 @@ export function EntityEditor() {
         )
         : null
 
+    // ✅ Guard: dacă din orice motiv e selectat un delimiter, ieșim din edit mode
+    useEffect(() => {
+        if (
+            activeEntityType === 'titles' &&
+            selectedEntity &&
+            (selectedEntity as any).kind === 'delimiter'
+        ) {
+            clearSelection()
+            setForm({})
+            // focus pe inputul primary (titlu) ca să poți adăuga imediat un title nou
+            focusPrimaryInput()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeEntityType, selectedEntity])
+
+
     // 🧠 Populare form
     useEffect(() => {
         if (!selectedEntity) {
