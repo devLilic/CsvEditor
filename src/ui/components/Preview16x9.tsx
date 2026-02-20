@@ -1,53 +1,105 @@
 // src/ui/components/Preview16x9.tsx
 import type { ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import type { EntityType } from '@/features/csv-editor'
-import {useScaleToFit} from "@/features/csv-editor/hooks/useScaleToFit";
+import { useScaleToFit } from '@/features/csv-editor/hooks/useScaleToFit'
+import { usePreviewLayout } from '@/features/csv-editor/hooks/usePreviewLayout'
 
 interface PreviewProps {
     content: ReactNode
     entityType: EntityType
+
+    /**
+     * IMPORTANT:
+     * Text simplu folosit DOAR pentru măsurare în useScaleToFit.
+     * (content poate fi JSX -> altfel toPlainText devine '' și scaleX nu se recalculează)
+     */
+    measureText: string
 }
 
-function toPlainText(node: ReactNode): string {
-    if (typeof node === 'string') return node
-    if (typeof node === 'number') return String(node)
-    // For complex JSX, we can’t reliably measure rendered width from data alone.
-    // In that case, keep scaleX=1 (no scaling) and let the UI pass a plain string.
-    return ''
-}
+export function Preview16x9({ content, entityType, measureText }: PreviewProps) {
+    // ✅ Single Source of Truth for layout (măsurat real, DPI/monitor safe)
+    const { previewRef, titleContainerRef, titleSize } = usePreviewLayout()
+    const availableWidth = titleSize.width
+    const isLayoutReady = availableWidth > 0
 
-export function Preview16x9({ content, entityType }: PreviewProps) {
-    const textForMeasure = toPlainText(content)
-    const { containerRef, textRef, scaleX } = useScaleToFit(textForMeasure, [entityType])
+    /**
+     * ✅ UI TUNING STATE (local, fără logic)
+     * Modifici rapid poziția/dimensiunea containerului și stilul textului.
+     */
+    const [tuning] = useState(() => ({
+        // container positioning / sizing (procente față de preview)
+        leftPct: 5,
+        bottomPct: 11.8,
+        widthPct: 73.5,
+
+        // typography
+        fontFamily: 'Arial',
+        fontSizePx: 32, // pornește cu ce corespunde template-ului tău
+        trackingEm: -0.006,
+
+        // optional: debug
+        showDebugBorder: false,
+    }))
+
+    // ⚠️ Normalize measure text (uppercase preview rule)
+    const textForMeasure = useMemo(() => {
+        const t = measureText ?? ''
+        return t.toUpperCase()
+    }, [measureText])
+
+    // ✅ scaleX depends ONLY on availableWidth + real text width
+    const { textRef, scaleX } = useScaleToFit(textForMeasure, {
+        deps: [entityType, availableWidth, textForMeasure],
+        availableWidth,
+    })
 
     return (
         <div
-            className="relative w-full max-w-[1000px] aspect-video bg-black rounded text-[32px] leading-9 overflow-x-auto flex mx-auto items-center justify-center bg-cover"
-            style={{ backgroundImage: "url('../public/news.png')" }}
+            ref={previewRef}
+            className="
+                relative w-full max-w-[1000px] aspect-video
+                rounded overflow-hidden mx-auto
+                bg-black
+                bg-center bg-no-repeat bg-contain
+            "
+            style={{ backgroundImage: "url('/news.png')" }}
         >
-      <span className="absolute top-2 left-2 text-xs text-white opacity-60">
-        PREVIEW – {entityType.toUpperCase()}
-      </span>
+            <span className="absolute top-2 left-2 text-xs text-white/70">
+                PREVIEW – {entityType.toUpperCase()}
+            </span>
 
-            <div className="w-full h-[24%] bg-white absolute bottom-0 left-0 opacity-75" />
-
-            {/* Fixed container; only the text scales on X */}
+            {/* Title container (SSoT: width is measured via ref; UI tuning only changes placement/size) */}
             <div
-                ref={containerRef}
-                className="w-[79.8%] px-1 text-blue-900 mr-4 border text-[2rem] absolute bottom-[12%] left-[5%] font-bold -tracking-[0.006em]"
-                style={{ fontFamily: 'Arial' }}
+                ref={titleContainerRef}
+                className={`
+                    absolute
+                    overflow-hidden
+                    whitespace-nowrap
+                    text-blue-900
+                    font-bold
+                    ${tuning.showDebugBorder ? 'ring-2 ring-fuchsia-500' : ''}
+                `}
+                style={{
+                    left: `${tuning.leftPct}%`,
+                    bottom: `${tuning.bottomPct}%`,
+                    width: `${tuning.widthPct}%`,
+                    fontFamily: tuning.fontFamily,
+                    letterSpacing: `${tuning.trackingEm}em`,
+                }}
             >
-        <span
-            ref={textRef}
-            style={{
-                display: 'inline-block',
-                transform: `scaleX(${scaleX})`,
-                transformOrigin: 'left',
-                whiteSpace: 'nowrap',
-            }}
-        >
-          {content ?? <span className="opacity-40">Preview</span>}
-        </span>
+                {/* scaleX ONLY on text element */}
+                <span
+                    ref={textRef}
+                    className="inline-block origin-left leading-none"
+                    style={{
+                        transform: `scaleX(${scaleX})`,
+                        opacity: isLayoutReady ? 1 : 0, // anti-jump
+                        fontSize: `${tuning.fontSizePx}px`,
+                    }}
+                >
+                    {content ?? <span className="opacity-40">Preview</span>}
+                </span>
             </div>
         </div>
     )

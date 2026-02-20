@@ -231,17 +231,22 @@ export function EntityEditor() {
         activeEntityType === 'persons' ? (
             <div className="flex flex-col leading-tight">
       <span className="font-semibold uppercase truncate">
-        {form.name ?? ''}
+        {form.name ?? 'NUME'}
       </span>
                 <span className="text-sm text-gray-300 truncate">
-        {form.occupation ?? ''}
+        {form.occupation ?? 'functie'}
       </span>
             </div>
         ) : (
             <span className="font-semibold uppercase truncate">
-      {form.title ?? form.location ?? ''}
+      {form.title ?? form.location ?? 'TITLU'}
     </span>
         )
+
+    const previewMeasureText =
+        activeEntityType === 'persons'
+            ? `${form.name ?? ''} ${form.occupation ?? ''}`.trim()
+            : (form.title ?? form.location ?? 'TITLU').trim()
 
 
     return (
@@ -249,6 +254,7 @@ export function EntityEditor() {
             <Preview16x9
                 entityType={activeEntityType}
                 content={previewContent}
+                measureText={previewMeasureText}
             />
 
             <div className="relative">
