@@ -78,7 +78,7 @@ export function EntityList() {
                         <div
                             key={item.id}
                             onClick={() => select('titles', item.id)}
-                            className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-3 border-l-4
+                            className={`px-3 py-3 cursor-pointer flex justify-between items-center gap-3 border-l-4
                                 ${isSelected('titles', item.id) ? 'bg-blue-100' : 'hover:bg-gray-100'}
                                 ${active ? 'border-red-600 bg-red-50' : ''}`}
                         >
@@ -97,8 +97,8 @@ export function EntityList() {
                                 )}
 
                                 {/* NUMĂR + TEXT */}
-                                <div className="flex gap-2 overflow-hidden font-bold">
-                                      <span className="text-xs text-gray-500 pt-[2px] shrink-0">
+                                <div className="flex text-xl gap-2 overflow-hidden font-bold flex justify-between">
+                                      <span className=" -pt-[6px] shrink-0">
                                           {titleNumber}.
                                       </span>
                                     <span className="truncate">{item.title}</span>
