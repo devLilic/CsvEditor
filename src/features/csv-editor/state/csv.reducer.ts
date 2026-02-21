@@ -1,3 +1,4 @@
+// File: src\features\csv-editor\state\csv.reducer.ts
 import { v4 as uuidv4 } from 'uuid'
 import type { CsvState, CsvAction } from './csv.types'
 import { EntityTypes } from '../domain/entities'

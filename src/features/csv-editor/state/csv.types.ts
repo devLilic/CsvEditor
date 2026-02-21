@@ -1,3 +1,4 @@
+// File: src\features\csv-editor\state\csv.types.ts
 import type { EntitiesState, EntityType } from '../domain/entities'
 
 export interface SelectedEntity {

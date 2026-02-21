@@ -1,9 +1,9 @@
 // src/ui/components/Preview16x9.tsx
-import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
-import type { EntityType } from '@/features/csv-editor'
-import { useScaleToFit } from '@/features/csv-editor/hooks/useScaleToFit'
-import { usePreviewLayout } from '@/features/csv-editor/hooks/usePreviewLayout'
+import type {ReactNode} from 'react'
+import {useMemo, useState} from 'react'
+import type {EntityType} from '@/features/csv-editor'
+import {useScaleToFit} from '@/features/csv-editor/hooks/useScaleToFit'
+import {usePreviewLayout} from '@/features/csv-editor/hooks/usePreviewLayout'
 
 interface PreviewProps {
     content: ReactNode
@@ -17,9 +17,9 @@ interface PreviewProps {
     measureText: string
 }
 
-export function Preview16x9({ content, entityType, measureText }: PreviewProps) {
+export function Preview16x9({content, entityType, measureText}: PreviewProps) {
     // ✅ Single Source of Truth for layout (măsurat real, DPI/monitor safe)
-    const { previewRef, titleContainerRef, titleSize } = usePreviewLayout()
+    const {previewRef, titleContainerRef, titleSize} = usePreviewLayout()
     const availableWidth = titleSize.width
     const isLayoutReady = availableWidth > 0
 
@@ -49,7 +49,7 @@ export function Preview16x9({ content, entityType, measureText }: PreviewProps) 
     }, [measureText])
 
     // ✅ scaleX depends ONLY on availableWidth + real text width
-    const { textRef, scaleX } = useScaleToFit(textForMeasure, {
+    const {textRef, scaleX} = useScaleToFit(textForMeasure, {
         deps: [entityType, availableWidth, textForMeasure],
         availableWidth,
     })
@@ -63,7 +63,7 @@ export function Preview16x9({ content, entityType, measureText }: PreviewProps) 
                 bg-black
                 bg-center bg-no-repeat bg-contain
             "
-            style={{ backgroundImage: "url('/news.png')" }}
+            style={{backgroundImage: "url('./news.png')"}}
         >
             <span className="absolute top-2 left-2 text-xs text-white/70">
                 PREVIEW – {entityType.toUpperCase()}
@@ -86,8 +86,7 @@ export function Preview16x9({ content, entityType, measureText }: PreviewProps) 
                     width: `${tuning.widthPct}%`,
                     fontFamily: tuning.fontFamily,
                     letterSpacing: `${tuning.trackingEm}em`,
-                }}
-            >
+                }}>
                 {/* scaleX ONLY on text element */}
                 <span
                     ref={textRef}
@@ -96,8 +95,7 @@ export function Preview16x9({ content, entityType, measureText }: PreviewProps) 
                         transform: `scaleX(${scaleX})`,
                         opacity: isLayoutReady ? 1 : 0, // anti-jump
                         fontSize: `${tuning.fontSizePx}px`,
-                    }}
-                >
+                    }}>
                     {content ?? <span className="opacity-40">Preview</span>}
                 </span>
             </div>
