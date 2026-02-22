@@ -1,47 +1,31 @@
-// features/csv-editor/hooks/useSelectedEntity.ts
-
+// src/features/csv-editor/hooks/useSelectedEntity.ts
 import { useCallback } from 'react'
 import { useCsvContext } from '../context/CsvContext'
 import type { EntityType } from '../domain/entities'
-import type { SelectedEntity } from '../state/csv.types'
+import type { SelectedEntity } from '../domain/csv.types'
 
-/**
- * Hook de conveniență pentru selecție
- * 👉 UX helper, NU business logic
- */
 export function useSelectedEntity() {
     const { state, dispatch } = useCsvContext()
-
     const selected = state.selected
 
     const select = useCallback(
-        (type: EntityType, id: string) => {
-            dispatch({
-                type: 'SELECT_ENTITY',
-                payload: { type, id },
-            })
+        (sectionId: string, entityType: EntityType, id: string) => {
+            const payload: SelectedEntity = { sectionId, entityType, id }
+            dispatch({ type: 'SET_SELECTED', payload })
         },
         [dispatch]
     )
 
     const clearSelection = useCallback(() => {
-        dispatch({
-            type: 'SELECT_ENTITY',
-            payload: null,
-        })
+        dispatch({ type: 'SET_SELECTED', payload: null })
     }, [dispatch])
 
     const isSelected = useCallback(
-        (type: EntityType, id: string) => {
-            return selected?.type === type && selected?.id === id
+        (sectionId: string, entityType: EntityType, id: string) => {
+            return selected?.sectionId === sectionId && selected?.entityType === entityType && selected?.id === id
         },
         [selected]
     )
 
-    return {
-        selected,
-        select,
-        clearSelection,
-        isSelected,
-    }
+    return { selected, select, clearSelection, isSelected }
 }

@@ -1,86 +1,75 @@
 // src/ui/components/EntityList.tsx
-import {
-    useEntities,
-    useSelectedEntity,
-    useActiveEntityType,
-    useOnAir,
-} from '@/features/csv-editor'
+import type { EntityType, Person, Location, SimpleTitle } from '@/features/csv-editor'
+import { useEntities, useSelectedEntity, useOnAir } from '@/features/csv-editor'
 import { EmptyState } from './common/EmptyState'
 import { useEditMode } from '@/ui/context/EditModeContext'
 
-type TitleRow = { id: string; kind: 'title'; title: string; rowIndex: number }
-type TitleDelimiter = { id: string; kind: 'delimiter'; rowIndex: number }
-type TitleListItem = TitleRow | TitleDelimiter
+type BlockItem =
+    | { entityType: 'titles'; id: string; rowId: string; data: SimpleTitle }
+    | { entityType: 'persons'; id: string; rowId: string; data: Person }
+    | { entityType: 'locations'; id: string; rowId: string; data: Location }
+    | { entityType: 'hotTitles'; id: string; rowId: string; data: SimpleTitle }
+    | { entityType: 'waitTitles'; id: string; rowId: string; data: SimpleTitle }
+    | { entityType: 'waitLocations'; id: string; rowId: string; data: Location }
 
-export function EntityList() {
-    const {
-        getEntities,
-        deleteEntity,
-        addDelimiterAfterTitle,
-        deleteDelimiter,
-    } = useEntities()
+interface EntityListProps {
+    sectionId: string
+    entityType: EntityType
+    title?: string
+}
 
+const LABELS: Record<EntityType, string> = {
+    titles: 'Titluri',
+    persons: 'Persoane',
+    locations: 'Locații',
+    hotTitles: 'Ultima Oră',
+    waitTitles: 'Titluri Așteptare',
+    waitLocations: 'Locații Așteptare',
+}
+
+export function EntityList({ sectionId, entityType, title }: EntityListProps) {
+    const { getBlockItems, deleteEntity } = useEntities()
     const { select, isSelected } = useSelectedEntity()
-    const { activeEntityType } = useActiveEntityType()
     const { isOnAir, setOnAir, clearOnAir } = useOnAir()
     const { editMode } = useEditMode()
 
-    const items = getEntities<any>(activeEntityType)
+    const items = getBlockItems(sectionId, entityType) as BlockItem[]
 
-    if (items.length === 0) {
-        return <EmptyState text="Nu există elemente în această secțiune." />
+    if (!items || items.length === 0) {
+        return (
+            <div className="bg-white rounded border">
+                <div className="px-3 py-2 text-sm font-semibold border-b bg-gray-50 flex items-center justify-between">
+                    <span>{title ?? LABELS[entityType]}</span>
+                    <span className="text-xs text-gray-400">0</span>
+                </div>
+                <div className="p-3">
+                    <EmptyState text="Nu există elemente în această listă." />
+                </div>
+            </div>
+        )
     }
 
-    // 🔢 Numerotăm DOAR TitleRow, ignorând delimiters
-    let titleNumber = 0
+    // 🔢 Numerotare DOAR pentru TITLES (per secțiune, corespunde cu CSV „Nr”)
+    let nr = 0
 
     return (
-        <div className="bg-white rounded border overflow-y-auto max-h-[900px]">
-            {activeEntityType === 'titles'
-                ? (items as TitleListItem[]).map((item) => {
-                    if (item.kind === 'delimiter') {
-                        // ✅ DELIMITER ROW (non-selectable)
-                        return (
-                            <div
-                                key={item.id}
-                                className="px-3 py-3 border-t border-b bg-gray-50"
-                                title="Delimiter"
-                            >
-                                <div className="flex items-center justify-between gap-3">
-                                    <div className="flex-1">
-                                        <div className="h-[2px] bg-gray-300 w-full rounded" />
-                                        <div className="h-2" />
-                                        <div className="h-[2px] bg-gray-300 w-full rounded" />
-                                    </div>
+        <div className="bg-white rounded border overflow-hidden">
 
-                                    {editMode && (
-                                        <button
-                                            title="Șterge delimiter"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                deleteDelimiter(item.id)
-                                            }}
-                                            className="text-xs text-white bg-red-500 hover:bg-red-800 border px-2 py-1 rounded border-red-700"
-                                        >
-                                            ✕
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        )
-                    }
 
-                    // ✅ TITLE ROW
-                    titleNumber += 1
-                    const active = isOnAir('titles', item.id)
+            <div className="max-h-[320px] overflow-y-auto">
+                {items.map((item) => {
+                    const active = isOnAir(entityType, item.id)
+                    const selected = isSelected(sectionId, entityType, item.id)
+
+                    if (entityType === 'titles') nr += 1
 
                     return (
                         <div
                             key={item.id}
-                            onClick={() => select('titles', item.id)}
-                            className={`px-3 py-3 cursor-pointer flex justify-between items-center gap-3 border-l-4
-                                ${isSelected('titles', item.id) ? 'bg-blue-100' : 'hover:bg-gray-100'}
-                                ${active ? 'border-red-600 bg-red-50' : ''}`}
+                            onClick={() => select(sectionId, entityType, item.id)}
+                            className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-3 border-l-4
+                                ${selected ? 'bg-blue-100' : 'hover:bg-gray-100'}
+                                ${active ? 'border-red-600 bg-red-50' : 'border-transparent'}`}
                         >
                             <div className="flex gap-2 overflow-hidden items-start">
                                 {editMode && (
@@ -88,125 +77,56 @@ export function EntityList() {
                                         title="Șterge"
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            deleteEntity('titles', item.id)
+                                            deleteEntity(sectionId, entityType, item.id)
                                         }}
-                                        className="text-xs text-white bg-red-500 hover:bg-red-800 border px-2 rounded border-red-700"
+                                        className="text-xs text-white bg-red-500 hover:bg-red-700 px-2 py-0.5 rounded"
                                     >
                                         ✕
                                     </button>
                                 )}
 
-                                {/* NUMĂR + TEXT */}
-                                <div className="flex text-xl gap-2 overflow-hidden font-bold flex justify-between">
-                                      <span className=" -pt-[6px] shrink-0">
-                                          {titleNumber}.
-                                      </span>
-                                    <span className="truncate">{item.title}</span>
-                                </div>
-                            </div>
-
-                            {/* RIGHT CONTROLS */}
-                            <div className="flex items-center gap-2 shrink-0">
-                                {editMode && (
-                                    <button
-                                        title="Add delimiter after"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            addDelimiterAfterTitle(item.id)
-                                        }}
-                                        className="text-xs px-2 py-1 rounded border border-gray-500 bg-gray-100 hover:bg-gray-200"
-                                    >
-                                        + delimiter
-                                    </button>
-                                )}
-
-                                {/* ON AIR CONTROL (titles) */}
-                                {active ? (
-                                    <>
-                                          <span className="text-xs font-semibold text-red-600">
-                                              ● ON AIR
-                                          </span>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                clearOnAir('titles')
-                                            }}
-                                            className="text-xs px-2 py-1 rounded border border-gray-500 bg-gray-200 hover:bg-gray-300"
-                                        >
-                                            STOP
-                                        </button>
-                                    </>
-                                ) : (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            setOnAir('titles', item.id)
-                                        }}
-                                        className="text-xs px-2 py-1 rounded border text-red-500 border-red-500 hover:text-white hover:bg-red-700"
-                                    >
-                                        ON AIR
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )
-                })
-                : items.map((item: any) => {
-                    const active = isOnAir(activeEntityType, item.id)
-
-                    return (
-                        <div
-                            key={item.id}
-                            onClick={() => select(activeEntityType, item.id)}
-                            className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-3 border-l-4
-                                ${isSelected(activeEntityType, item.id) ? 'bg-blue-100' : 'hover:bg-gray-100'}
-                                ${active ? 'border-red-600 bg-red-50' : ''}`}
-                        >
-                            <div className="flex gap-2 overflow-hidden">
-                                {editMode && (
-                                    <button
-                                        title="Șterge"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            deleteEntity(activeEntityType, item.id)
-                                        }}
-                                        className="text-xs text-white bg-red-500 hover:bg-red-800 border px-2 rounded border-red-700"
-                                    >
-                                        ✕
-                                    </button>
-                                )}
-
-                                <div className="flex flex-col overflow-hidden font-bold">
-                                    {activeEntityType === 'persons' ? (
+                                <div className="min-w-0">
+                                    {entityType === 'persons' ? (
                                         <>
-                                              <span className="font-medium truncate">
-                                                  {item.name}
-                                              </span>
-                                            <span className="text-sm text-gray-600 truncate">
-                                                  {item.occupation}
-                                              </span>
+                                            <div className="font-bold truncate">
+                                                {(item.data as Person).name}
+                                            </div>
+                                            <div className="text-xs text-gray-600 truncate">
+                                                {(item.data as Person).occupation}
+                                            </div>
                                         </>
+                                    ) : entityType === 'locations' || entityType === 'waitLocations' ? (
+                                        <div className="font-bold truncate">
+                                            {(item.data as Location).location}
+                                        </div>
                                     ) : (
-                                        <span className="truncate">
-                                              {item.title || item.location}
-                                          </span>
+                                        <div className="font-bold truncate flex gap-2">
+                                            {entityType === 'titles' && (
+                                                <span className="shrink-0 text-gray-600">
+                                                    {nr}.
+                                                </span>
+                                            )}
+                                            <span className="truncate">
+                                                {(item.data as SimpleTitle).title}
+                                            </span>
+                                        </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* ON AIR CONTROL */}
+                            {/* ON AIR (max 1 per EntityType) */}
                             <div className="flex items-center gap-2 shrink-0">
                                 {active ? (
                                     <>
-                                          <span className="text-xs font-semibold text-red-600">
-                                              ● ON AIR
-                                          </span>
+                                        <span className="text-xs font-semibold text-red-600">
+                                            ● ON AIR
+                                        </span>
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation()
-                                                clearOnAir(activeEntityType)
+                                                clearOnAir(entityType)
                                             }}
-                                            className="text-xs px-2 py-1 rounded border border-gray-500 bg-gray-200 hover:bg-gray-300"
+                                            className="text-xs px-2 py-1 rounded border border-gray-400 bg-gray-100 hover:bg-gray-200"
                                         >
                                             STOP
                                         </button>
@@ -215,9 +135,9 @@ export function EntityList() {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            setOnAir(activeEntityType, item.id)
+                                            setOnAir(entityType, item.id)
                                         }}
-                                        className="text-xs px-2 py-1 rounded border text-red-500 border-red-500 hover:text-white hover:bg-red-700"
+                                        className="text-xs px-2 py-1 rounded border border-red-500 text-red-500 hover:bg-red-600 hover:text-white"
                                     >
                                         ON AIR
                                     </button>
@@ -226,6 +146,7 @@ export function EntityList() {
                         </div>
                     )
                 })}
+            </div>
         </div>
     )
 }

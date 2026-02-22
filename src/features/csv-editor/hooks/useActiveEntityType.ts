@@ -1,3 +1,4 @@
+// File: src/features/csv-editor/hooks/useActiveEntityType.ts
 import { useCallback } from 'react'
 import { useCsvContext } from '../context/CsvContext'
 import type { EntityType } from '../domain/entities'

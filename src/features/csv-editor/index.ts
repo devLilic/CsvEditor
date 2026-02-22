@@ -1,4 +1,4 @@
-// features/csv-editor/index.ts
+// src/features/csv-editor/index.ts
 
 // services
 export { csvService } from './services/csvService'
@@ -18,3 +18,5 @@ export { CsvProvider } from './context/CsvContext'
 
 // domain
 export * from './domain/entities'
+export * from './domain/csv.types'
+export * from './domain/csv.schema'

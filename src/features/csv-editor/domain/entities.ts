@@ -1,4 +1,5 @@
-// features/csv-editor/domain/entities.ts
+// src/features/csv-editor/domain/entities.ts
+import type { SectionKind } from './csv.types'
 
 export const EntityTypes = {
     PERSONS: 'persons',
@@ -9,93 +10,83 @@ export const EntityTypes = {
     WAIT_LOCATIONS: 'waitLocations',
 } as const
 
-/**
- * Tipurile de entități suportate de CSV Editor
- * (chei folosite peste tot: reducer, hooks, UI)
- */
 export type EntityType = typeof EntityTypes[keyof typeof EntityTypes]
 
-/**
- * Bază comună pentru toate entitățile
- */
 export interface BaseEntity {
     id: string
 }
 
-/**
- * Entități care pot fi aliniate pe rânduri CSV.
- * rowIndex este 0-based (index de rând în CSV).
- */
-export interface RowIndexed {
-    rowIndex?: number
-}
-
-/**
- * PERSON
- * CSV: Nume / Functie
- */
-export interface Person extends BaseEntity, RowIndexed {
+export interface Person extends BaseEntity {
     name: string
     occupation: string
 }
 
-/**
- * TITLE schema nouă:
- * - CSV col1: Nr (derivat la export)
- * - CSV col2: Titlu (text)
- *
- * În state, titles poate conține și delimiters (rând complet gol în CSV).
- */
-export interface TitleRow extends BaseEntity, RowIndexed {
-    kind: 'title'
+export interface SimpleTitle extends BaseEntity {
     title: string
 }
 
-export interface TitleDelimiter extends BaseEntity, RowIndexed {
-    kind: 'delimiter'
-}
-
-export type TitleItem = TitleRow | TitleDelimiter
-
-/**
- * LOCATION
- * CSV: Locatie
- */
-export interface Location extends BaseEntity, RowIndexed {
+export interface Location extends BaseEntity {
     location: string
 }
 
 /**
- * Refolosim modelul Title simplu pentru hotTitles/waitTitles
- * (nu au delimiter logic).
+ * Canonical row inside a section.
+ * Packing/export is based on row order.
  */
-export interface SimpleTitle extends BaseEntity, RowIndexed {
-    title: string
+export interface SectionRow {
+    id: string
+
+    // allowed in beta + invited
+    title?: SimpleTitle
+    person?: Person
+    location?: Location
+    hotTitle?: SimpleTitle
+
+    // allowed only in INVITATI
+    waitTitle?: SimpleTitle
+    waitLocation?: Location
 }
 
-/**
- * STATE CANONIC AL APLICAȚIEI
- * 👉 Single Source of Truth
- */
+export interface CsvSection {
+    id: string
+    kind: SectionKind
+
+    // beta-only metadata
+    betaIndex?: number
+    betaTitle?: string
+
+    rows: SectionRow[]
+}
+
 export interface EntitiesState {
-    persons: Person[]
-    titles: TitleItem[]
-    locations: Location[]
-    hotTitles: SimpleTitle[]
-    waitTitles: SimpleTitle[]
-    waitLocations: Location[]
+    sections: CsvSection[]
 }
 
-/**
- * Helper pentru creare state gol (evită duplicări)
- */
-export function createEmptyEntitiesState(): EntitiesState {
+export function createInvitedSection(id: string, rows: SectionRow[] = []): CsvSection {
     return {
-        persons: [],
-        titles: [],
-        locations: [],
-        hotTitles: [],
-        waitTitles: [],
-        waitLocations: [],
+        id,
+        kind: 'invited',
+        rows,
+    }
+}
+
+export function createBetaSection(
+    id: string,
+    betaIndex: number,
+    betaTitle: string,
+    rows: SectionRow[]
+): CsvSection {
+    return {
+        id,
+        kind: 'beta',
+        betaIndex,               // 1..n
+        betaTitle,               // editabil, ex: "Consiliu UE"
+        rows,
+    }
+}
+
+export function createEmptyEntitiesState(invitedId: string): EntitiesState {
+    return {
+        sections: [createInvitedSection(invitedId, [])],
     }
 }

@@ -47,7 +47,6 @@ export function useCsvAutosave(options?: { debounceMs?: number }) {
             if (res.ok) {
                 lastSerializedRef.current = csv
             } else {
-                // aici UI poate afișa toast / warning
                 console.error('Autosave failed:', res.error)
             }
         }, debounceMs)
@@ -55,6 +54,7 @@ export function useCsvAutosave(options?: { debounceMs?: number }) {
         return () => {
             if (debounceTimerRef.current) {
                 window.clearTimeout(debounceTimerRef.current)
+                debounceTimerRef.current = null
             }
         }
     }, [state.entities, state.isLoaded, debounceMs])

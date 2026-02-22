@@ -1,17 +1,10 @@
-// features/csv-editor/utils/csvParser.ts
-
+// src/features/csv-editor/utils/csvParser.ts
 import Papa from 'papaparse'
 import { v4 as uuidv4 } from 'uuid'
-import type { EntitiesState, Person, TitleItem, TitleRow, Location, SimpleTitle } from '../domain/entities'
+import type { EntitiesState, CsvSection, SectionRow, SimpleTitle, Person, Location } from '../domain/entities'
+import { createBetaSection, createInvitedSection } from '../domain/entities'
+import { isInvitedMarker, parseBetaMarker } from '../domain/csv.schema'
 
-/**
- * Coloanele oficiale din CSV
- * (singurul loc unde aceste string-uri există)
- *
- * Schema nouă pentru TITLES:
- *  - Nr (col1)  -> număr de ordine (ignorăm la import; îl derivăm la export)
- *  - Titlu (col2) -> text titlu
- */
 export const CSV_COLUMNS = {
     TITLE_NR: 'Nr',
     TITLE: 'Titlu',
@@ -25,128 +18,177 @@ export const CSV_COLUMNS = {
     WAIT_LOCATION: 'Locatie Asteptare',
 } as const
 
-type CsvRow = Record<string, string | undefined>
+type CsvRowRaw = Record<string, string | undefined>
 
-function cell(row: CsvRow, key: string): string {
+function cell(row: CsvRowRaw, key: string): string {
     return (row[key] ?? '').trim()
 }
 
-function isCompletelyEmptyRow(row: CsvRow): boolean {
+function isCompletelyEmptyRow(row: CsvRowRaw): boolean {
     const values = Object.values(row ?? {})
-    // Papa poate produce {} pentru un rând gol când header=true
     if (values.length === 0) return true
     return values.every((v) => (v ?? '').trim() === '')
 }
 
+function buildRowFromCsv(row: CsvRowRaw, allowWait: boolean): Omit<SectionRow, 'id'> | null {
+    const titleText = cell(row, CSV_COLUMNS.TITLE)
+    const name = cell(row, CSV_COLUMNS.PERSON_NAME)
+    const occupation = cell(row, CSV_COLUMNS.PERSON_OCCUPATION)
+    const loc = cell(row, CSV_COLUMNS.LOCATION)
+    const hot = cell(row, CSV_COLUMNS.HOT_TITLE)
+    const wt = cell(row, CSV_COLUMNS.WAIT_TITLE)
+    const wl = cell(row, CSV_COLUMNS.WAIT_LOCATION)
+
+    // empty row inside a section -> ignore (no delimiter concept anymore)
+    if (
+        titleText === '' &&
+        name === '' &&
+        occupation === '' &&
+        loc === '' &&
+        hot === '' &&
+        wt === '' &&
+        wl === ''
+    ) {
+        return null
+    }
+
+    const out: Omit<SectionRow, 'id'> = {}
+
+    if (titleText !== '') {
+        const t: SimpleTitle = { id: uuidv4(), title: titleText }
+        out.title = t
+    }
+
+    if (name !== '' || occupation !== '') {
+        const p: Person = { id: uuidv4(), name, occupation }
+        out.person = p
+    }
+
+    if (loc !== '') {
+        const l: Location = { id: uuidv4(), location: loc }
+        out.location = l
+    }
+
+    if (hot !== '') {
+        const h: SimpleTitle = { id: uuidv4(), title: hot }
+        out.hotTitle = h
+    }
+
+    if (allowWait) {
+        if (wt !== '') {
+            out.waitTitle = { id: uuidv4(), title: wt }
+        }
+        if (wl !== '') {
+            out.waitLocation = { id: uuidv4(), location: wl }
+        }
+    }
+
+    return out
+}
+
 /**
- * CSV string ➜ EntitiesState
- * Funcție PURĂ, fără side-effects
+ * CSV string ➜ EntitiesState (sections-based)
  *
- * Reguli:
- * - skipEmptyLines: false (păstrăm rândurile complet goale ca delimiters)
- * - Delimiter row = rând în care TOATE coloanele sunt goale
- * - Titlurile se citesc din col2 (Titlu)
- * - Nr este ignorat la import (derivat la export)
+ * Rules:
+ * - Marker row is detected by Titlu column:
+ *   --- beta N - <title> ---
+ *   --- INVITATI ---
+ * - Marker rows do not create content rows; they only switch current section.
+ * - Rows are stored canonically as section.rows[] (packing model).
+ * - If no markers exist → fallback to single INVITATI section with all rows.
  */
 export function parseCsv(content: string): EntitiesState {
-    const parsed = Papa.parse<CsvRow>(content, {
+    const parsed = Papa.parse<CsvRowRaw>(content, {
         header: true,
         delimiter: ';',
         skipEmptyLines: false,
     })
 
-    const persons: Person[] = []
-    const titles: TitleItem[] = []
-    const locations: Location[] = []
-    const hotTitles: SimpleTitle[] = []
-    const waitTitles: SimpleTitle[] = []
-    const waitLocations: Location[] = []
+    const sections: CsvSection[] = []
 
-    parsed.data.forEach((row, rowIndex) => {
-        // ✅ delimiter row (rând complet gol în CSV)
+    let sawAnyMarker = false
+
+    // fallback default: we still build invited, but we won't push until we confirm no markers
+    const fallbackInvitedId = uuidv4()
+    let current: CsvSection | null = null
+
+    const ensureInvitedLast = () => {
+        const invited = sections.find((s) => s.kind === 'invited')
+        if (!invited) {
+            sections.push(createInvitedSection(uuidv4(), []))
+        } else {
+            // move to end
+            const rest = sections.filter((s) => s.id !== invited.id)
+            sections.length = 0
+            sections.push(...rest, invited)
+        }
+    }
+
+    const startSection = (next: CsvSection) => {
+        // push previous
+        if (current) sections.push(current)
+        current = next
+    }
+
+    parsed.data.forEach((row) => {
         if (isCompletelyEmptyRow(row)) {
-            titles.push({
-                id: uuidv4(),
-                kind: 'delimiter',
-                rowIndex,
-            })
+            // no delimiter concept -> ignore empty rows
             return
         }
 
-        // PERSON
-        const name = cell(row, CSV_COLUMNS.PERSON_NAME)
-        const occupation = cell(row, CSV_COLUMNS.PERSON_OCCUPATION)
-        if (name !== '' || occupation !== '') {
-            persons.push({
-                id: uuidv4(),
-                name,
-                occupation,
-                rowIndex,
-            })
+        const titleCell = cell(row, CSV_COLUMNS.TITLE)
+
+        // Marker: INVITATI
+        if (titleCell && isInvitedMarker(titleCell)) {
+            sawAnyMarker = true
+            startSection(createInvitedSection(uuidv4(), []))
+            return
         }
 
-        // TITLE (col2)
-        const titleText = cell(row, CSV_COLUMNS.TITLE)
-        if (titleText !== '') {
-            const t: TitleRow = {
-                id: uuidv4(),
-                kind: 'title',
-                title: titleText,
-                rowIndex,
+        // Marker: beta
+        if (titleCell) {
+            const beta = parseBetaMarker(titleCell)
+            if (beta) {
+                sawAnyMarker = true
+                startSection(createBetaSection(uuidv4(), beta.betaIndex, beta.betaTitle, []))
+                return
             }
-            titles.push(t)
         }
 
-        // LOCATION
-        const loc = cell(row, CSV_COLUMNS.LOCATION)
-        if (loc !== '') {
-            locations.push({
-                id: uuidv4(),
-                location: loc,
-                rowIndex,
-            })
+        // content row
+        const allowWait = current?.kind === 'invited'
+        const rowData = buildRowFromCsv(row, Boolean(allowWait))
+        if (!rowData) return
+
+        if (!current) {
+            // if content appears before any markers, we still keep it.
+            // we will decide fallback after parsing.
+            current = createInvitedSection(fallbackInvitedId, [])
         }
 
-        // HOT TITLE
-        const hot = cell(row, CSV_COLUMNS.HOT_TITLE)
-        if (hot !== '') {
-            hotTitles.push({
-                id: uuidv4(),
-                title: hot,
-                rowIndex,
-            })
-        }
-
-        // WAIT TITLE
-        const wt = cell(row, CSV_COLUMNS.WAIT_TITLE)
-        if (wt !== '') {
-            waitTitles.push({
-                id: uuidv4(),
-                title: wt,
-                rowIndex,
-            })
-        }
-
-        // WAIT LOCATION
-        const wl = cell(row, CSV_COLUMNS.WAIT_LOCATION)
-        if (wl !== '') {
-            waitLocations.push({
-                id: uuidv4(),
-                location: wl,
-                rowIndex,
-            })
-        }
+        current.rows.push({
+            id: uuidv4(),
+            ...rowData,
+        })
     })
 
-    // titles keep stable order by rowIndex
-    titles.sort((a, b) => (a.rowIndex ?? 0) - (b.rowIndex ?? 0))
+    if (current) sections.push(current)
 
-    return {
-        persons,
-        titles,
-        locations,
-        hotTitles,
-        waitTitles,
-        waitLocations,
+    // Fallback: no markers -> single invited section with everything
+    if (!sawAnyMarker) {
+        // merge all rows into one invited
+        const allRows: SectionRow[] = []
+        for (const s of sections) {
+            allRows.push(...s.rows)
+        }
+        return {
+            sections: [createInvitedSection(fallbackInvitedId, allRows)],
+        }
     }
+
+    // Normalize: beta indices should follow parsed marker numbers; UI will reindex on delete/add operations
+    // Ensure invited exists and is last
+    ensureInvitedLast()
+
+    return { sections }
 }

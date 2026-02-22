@@ -1,63 +1,69 @@
 // src/features/settings/services/settingsService.ts
 import type { AppConfig } from '@/shared/ipc-types'
 
-/**
- * Accessor lazy pentru preload API.
- * NU se citește electronAPI la import-time.
- * Permite mock în testare fără Electron runtime.
- */
 function getApi() {
     const api = (window as any)?.electronAPI
-
     if (!api) {
         throw new Error('electronAPI not available')
     }
-
     return api
 }
 
 /**
- * settingsService
- *
- * Responsabilități:
- * - wrapper sigur peste IPC Electron (settings)
- * - fallback predictibil
- * - complet testabil fără Electron
- *
- * NU face:
- * - validare business
- * - state management
- * - logică UI
+ * Internal pub/sub pentru quickTitles
  */
+type QuickTitlesListener = (titles: string[]) => void
+const quickTitlesListeners = new Set<QuickTitlesListener>()
+
+function emitQuickTitles(list: string[]) {
+    for (const l of quickTitlesListeners) {
+        try {
+            l(list)
+        } catch (e) {
+            console.error('[settingsService] quickTitles listener error', e)
+        }
+    }
+}
+
 export const settingsService = {
-    /**
-     * Returnează lista quickTitles
-     */
+
+    // ---- QUICK TITLES ----
+
     async getQuickTitles(): Promise<string[]> {
         try {
             const res = await getApi().getQuickTitles()
-            return Array.isArray(res) ? res : []
+            const safe = Array.isArray(res) ? res : []
+            emitQuickTitles(safe)
+            return safe
         } catch {
             return []
         }
     },
 
-    /**
-     * Persistă lista quickTitles
-     */
     async setQuickTitles(list: string[]): Promise<void> {
         if (!Array.isArray(list)) return
 
         try {
             await getApi().setQuickTitles(list)
+            emitQuickTitles(list) // 🔥 notifică UI
         } catch {
             // intentionally silent
         }
     },
 
     /**
-     * Returnează configurația aplicației
+     * Subscribe la schimbări quickTitles.
+     * Returnează unsubscribe().
      */
+    subscribeQuickTitles(listener: QuickTitlesListener): () => void {
+        quickTitlesListeners.add(listener)
+        return () => {
+            quickTitlesListeners.delete(listener)
+        }
+    },
+
+    // ---- CONFIG ----
+
     async getConfig(): Promise<AppConfig> {
         try {
             const res = await getApi().getAppConfig()
@@ -67,9 +73,6 @@ export const settingsService = {
         }
     },
 
-    /**
-     * Salvează configurația aplicației
-     */
     async setConfig(cfg: AppConfig): Promise<AppConfig> {
         if (!cfg || typeof cfg !== 'object') {
             return {}

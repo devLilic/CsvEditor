@@ -1,162 +1,371 @@
-// File: src\features\csv-editor\state\csv.reducer.ts
+// src/features/csv-editor/state/csv.reducer.ts
 import { v4 as uuidv4 } from 'uuid'
 import type { CsvState, CsvAction } from './csv.types'
 import { EntityTypes } from '../domain/entities'
-import type { TitleItem, TitleRow, TitleDelimiter } from '../domain/entities'
+import type { CsvSection, SectionRow, Person, SimpleTitle, Location, EntityType } from '../domain/entities'
+import { createBetaSection, createInvitedSection } from '../domain/entities'
 
-function nextTitleRowIndex(titles: TitleItem[]): number {
-    // append-only: next index is last *title* rowIndex + 1 (ignores gaps)
-    const max = titles
-        .filter((t): t is TitleRow => t.kind === 'title')
-        .map((t) => t.rowIndex)
-        .filter((n): n is number => typeof n === 'number' && Number.isFinite(n))
-        .reduce((acc, n) => Math.max(acc, n), -1)
-    return max + 1
+function isInvited(section: CsvSection) {
+    return section.kind === 'invited'
 }
 
-function nextFreeRowIndex(entities: CsvState['entities'], startAt: number): number {
-    const occupied = new Set<number>()
+function slotIsEmpty(row: SectionRow, entityType: EntityType): boolean {
+    switch (entityType) {
+        case EntityTypes.TITLES:
+            return !row.title
+        case EntityTypes.PERSONS:
+            return !row.person
+        case EntityTypes.LOCATIONS:
+            return !row.location
+        case EntityTypes.HOT_TITLES:
+            return !row.hotTitle
+        case EntityTypes.WAIT_TITLES:
+            return !row.waitTitle
+        case EntityTypes.WAIT_LOCATIONS:
+            return !row.waitLocation
+        default:
+            return true
+    }
+}
 
-    const collect = (arr: Array<{ rowIndex?: number }>) => {
-        for (const e of arr) {
-            if (typeof e.rowIndex === 'number' && Number.isFinite(e.rowIndex)) {
-                occupied.add(e.rowIndex)
-            }
-        }
+function setSlot(row: SectionRow, entityType: EntityType, value: any): SectionRow {
+    switch (entityType) {
+        case EntityTypes.TITLES:
+            return { ...row, title: value as SimpleTitle }
+        case EntityTypes.PERSONS:
+            return { ...row, person: value as Person }
+        case EntityTypes.LOCATIONS:
+            return { ...row, location: value as Location }
+        case EntityTypes.HOT_TITLES:
+            return { ...row, hotTitle: value as SimpleTitle }
+        case EntityTypes.WAIT_TITLES:
+            return { ...row, waitTitle: value as SimpleTitle }
+        case EntityTypes.WAIT_LOCATIONS:
+            return { ...row, waitLocation: value as Location }
+        default:
+            return row
+    }
+}
+
+function createEmptyRow(): SectionRow {
+    return { id: uuidv4() }
+}
+
+function makeEntity(entityType: EntityType, data: Record<string, unknown>) {
+    if (entityType === EntityTypes.PERSONS) {
+        return {
+            id: uuidv4(),
+            name: String((data as any).name ?? ''),
+            occupation: String((data as any).occupation ?? ''),
+        } satisfies Person
     }
 
-    collect(entities.titles)
-    collect(entities.persons)
-    collect(entities.locations)
-    collect(entities.hotTitles)
-    collect(entities.waitTitles)
-    collect(entities.waitLocations)
+    if (entityType === EntityTypes.LOCATIONS || entityType === EntityTypes.WAIT_LOCATIONS) {
+        return {
+            id: uuidv4(),
+            location: String((data as any).location ?? ''),
+        } satisfies Location
+    }
 
-    let idx = startAt
-    while (occupied.has(idx)) idx += 1
-    return idx
+    // titles / hotTitles / waitTitles
+    return {
+        id: uuidv4(),
+        title: String((data as any).title ?? ''),
+    } satisfies SimpleTitle
+}
+function ensureInvitedLast(sections: CsvSection[]): CsvSection[] {
+    const invited = sections.find((s) => s.kind === 'invited')
+    if (!invited) {
+        return [...sections, createInvitedSection(uuidv4(), [])]
+    }
+    const rest = sections.filter((s) => s.id !== invited.id)
+    return [...rest, invited]
+}
+
+function reindexBetas(sections: CsvSection[]): CsvSection[] {
+    const invited = sections.find((s) => s.kind === 'invited') ?? null
+    const betas = sections.filter((s) => s.kind === 'beta')
+
+    const re = betas.map((b, idx) => ({
+        ...b,
+        betaIndex: idx + 1,   // 🔥 începe de la 1
+    }))
+
+    return invited ? [...re, invited] : re
+}
+
+function findSection(sections: CsvSection[], sectionId: string): CsvSection | null {
+    return sections.find((s) => s.id === sectionId) ?? null
+}
+
+function canUseWait(kind: CsvSection['kind'], entityType: EntityType): boolean {
+    if (kind !== 'invited') {
+        return entityType !== EntityTypes.WAIT_TITLES && entityType !== EntityTypes.WAIT_LOCATIONS
+    }
+    return true
+}
+
+function addRowWithEntity(section: CsvSection, entityType: EntityType, data: Record<string, unknown>): CsvSection {
+    // append-only row model
+    const row: SectionRow = { id: uuidv4() }
+
+    switch (entityType) {
+        case EntityTypes.TITLES: {
+            const title = String((data as any).title ?? '').trim()
+            row.title = { id: uuidv4(), title }
+            break
+        }
+        case EntityTypes.PERSONS: {
+            const name = String((data as any).name ?? '')
+            const occupation = String((data as any).occupation ?? '')
+            row.person = { id: uuidv4(), name, occupation }
+            break
+        }
+        case EntityTypes.LOCATIONS: {
+            const location = String((data as any).location ?? '')
+            row.location = { id: uuidv4(), location }
+            break
+        }
+        case EntityTypes.HOT_TITLES: {
+            const title = String((data as any).title ?? '')
+            row.hotTitle = { id: uuidv4(), title }
+            break
+        }
+        case EntityTypes.WAIT_TITLES: {
+            const title = String((data as any).title ?? '')
+            row.waitTitle = { id: uuidv4(), title }
+            break
+        }
+        case EntityTypes.WAIT_LOCATIONS: {
+            const location = String((data as any).location ?? '')
+            row.waitLocation = { id: uuidv4(), location }
+            break
+        }
+        default:
+            return section
+    }
+
+    return {
+        ...section,
+        rows: [...section.rows, row],
+    }
+}
+
+function updateEntityInSection(section: CsvSection, entityType: EntityType, id: string, data: Record<string, unknown>): CsvSection {
+    const rows = section.rows.map((r) => {
+        if (entityType === EntityTypes.TITLES && r.title?.id === id) {
+            return { ...r, title: { ...r.title, title: String((data as any).title ?? r.title.title) } }
+        }
+        if (entityType === EntityTypes.PERSONS && r.person?.id === id) {
+            const next: Person = {
+                ...r.person,
+                name: String((data as any).name ?? r.person.name),
+                occupation: String((data as any).occupation ?? r.person.occupation),
+            }
+            return { ...r, person: next }
+        }
+        if (entityType === EntityTypes.LOCATIONS && r.location?.id === id) {
+            const next: Location = { ...r.location, location: String((data as any).location ?? r.location.location) }
+            return { ...r, location: next }
+        }
+        if (entityType === EntityTypes.HOT_TITLES && r.hotTitle?.id === id) {
+            const next: SimpleTitle = { ...r.hotTitle, title: String((data as any).title ?? r.hotTitle.title) }
+            return { ...r, hotTitle: next }
+        }
+        if (entityType === EntityTypes.WAIT_TITLES && r.waitTitle?.id === id) {
+            const next: SimpleTitle = { ...r.waitTitle, title: String((data as any).title ?? r.waitTitle.title) }
+            return { ...r, waitTitle: next }
+        }
+        if (entityType === EntityTypes.WAIT_LOCATIONS && r.waitLocation?.id === id) {
+            const next: Location = { ...r.waitLocation, location: String((data as any).location ?? r.waitLocation.location) }
+            return { ...r, waitLocation: next }
+        }
+        return r
+    })
+
+    return { ...section, rows }
+}
+
+function isSlotOccupied(row: SectionRow, entityType: EntityType): boolean {
+    switch (entityType) {
+        case EntityTypes.TITLES: return Boolean(row.title)
+        case EntityTypes.PERSONS: return Boolean(row.person)
+        case EntityTypes.LOCATIONS: return Boolean(row.location)
+        case EntityTypes.HOT_TITLES: return Boolean(row.hotTitle)
+        case EntityTypes.WAIT_TITLES: return Boolean(row.waitTitle)
+        case EntityTypes.WAIT_LOCATIONS: return Boolean(row.waitLocation)
+        default: return false
+    }
+}
+
+function getInsertIndexAfterLastOccupied(rows: SectionRow[], entityType: EntityType): number {
+    let last = -1
+    for (let i = 0; i < rows.length; i++) {
+        if (isSlotOccupied(rows[i], entityType)) last = i
+    }
+    return last + 1
+}
+
+function ensureRowExists(rows: SectionRow[], index: number): SectionRow[] {
+    if (index < rows.length) return rows
+    const next = [...rows]
+    while (next.length <= index) next.push({ id: uuidv4() })
+    return next
+}
+
+function deleteEntityInSection(section: CsvSection, entityType: EntityType, id: string): CsvSection {
+    const rows = section.rows
+        .map((r) => {
+            if (entityType === EntityTypes.TITLES && r.title?.id === id) return { ...r, title: undefined }
+            if (entityType === EntityTypes.PERSONS && r.person?.id === id) return { ...r, person: undefined }
+            if (entityType === EntityTypes.LOCATIONS && r.location?.id === id) return { ...r, location: undefined }
+            if (entityType === EntityTypes.HOT_TITLES && r.hotTitle?.id === id) return { ...r, hotTitle: undefined }
+            if (entityType === EntityTypes.WAIT_TITLES && r.waitTitle?.id === id) return { ...r, waitTitle: undefined }
+            if (entityType === EntityTypes.WAIT_LOCATIONS && r.waitLocation?.id === id) return { ...r, waitLocation: undefined }
+            return r
+        })
+        // optional cleanup: remove rows that became empty
+        .filter((r) => Boolean(r.title || r.person || r.location || r.hotTitle || r.waitTitle || r.waitLocation))
+
+    return { ...section, rows }
 }
 
 export function csvReducer(state: CsvState, action: CsvAction): CsvState {
     switch (action.type) {
-        case 'CSV_LOADED':
+        case 'CSV_LOADED': {
+            const sections = ensureInvitedLast(action.payload.sections ?? [])
+            const activeSectionId = state.activeSectionId ?? sections[0]?.id ?? null
             return {
                 ...state,
-                entities: action.payload,
+                entities: { sections },
                 isLoaded: true,
+                activeSectionId,
+            }
+        }
+
+        // ---------------- Sections ----------------
+        case 'SECTION_SET_ACTIVE':
+            return {
+                ...state,
+                activeSectionId: action.payload.sectionId,
             }
 
-        case 'ENTITY_ADD': {
-            const { entityType, data } = action.payload
+        case 'SECTION_ADD_BETA': {
+            const betas = state.entities.sections.filter((s) => s.kind === 'beta')
+            const betaIndex = betas.length + 1
 
-            // Titles: append-only by rowIndex, and support TitleItem model
-            if (entityType === EntityTypes.TITLES) {
-                const rowIndex = nextTitleRowIndex(state.entities.titles)
-                const titleText = String((data as any).title ?? '').trim()
+            const betaTitle = String(action.payload.betaTitle ?? '').trim() || 'Titlu'
 
-                const newTitle: TitleRow = {
-                    id: uuidv4(),
-                    kind: 'title',
-                    title: titleText,
-                    rowIndex,
-                }
+            const newBeta = createBetaSection(uuidv4(), betaIndex, betaTitle, [])
 
-                return {
-                    ...state,
-                    entities: {
-                        ...state.entities,
-                        titles: [...state.entities.titles, newTitle].sort(
-                            (a, b) => (a.rowIndex ?? 0) - (b.rowIndex ?? 0)
-                        ),
-                    },
-                    activeEntityType: entityType,
-                }
-            }
-
-            // other entities: keep existing behavior (no append-only requirement specified)
-            const list = state.entities[entityType] as Array<{ rowIndex?: number }>
-
-            const maxRow = list
-                .map((e) => e.rowIndex)
-                .filter((n): n is number => typeof n === 'number' && Number.isFinite(n))
-                .reduce((acc, n) => Math.max(acc, n), -1)
-
-            const rowIndex = maxRow + 1
+            const nextSections = reindexBetas([
+                ...state.entities.sections.filter((s) => s.kind === 'beta'),
+                newBeta,
+                state.entities.sections.find((s) => s.kind === 'invited')!,
+            ])
 
             return {
                 ...state,
-                entities: {
-                    ...state.entities,
-                    [entityType]: [
-                        ...(state.entities[entityType] as any[]),
-                        { id: uuidv4(), ...data, rowIndex },
-                    ],
-                },
+                entities: { ...state.entities, sections: nextSections },
+                activeSectionId: newBeta.id,
+            }
+        }
+
+        case 'SECTION_RENAME_BETA': {
+            const next = state.entities.sections.map((s) => {
+                if (s.id !== action.payload.sectionId) return s
+                if (s.kind !== 'beta') return s
+                return { ...s, betaTitle: action.payload.betaTitle }
+            })
+            return { ...state, entities: { sections: next } }
+        }
+
+        case 'SECTION_DELETE_BETA': {
+            const target = state.entities.sections.find((s) => s.id === action.payload.sectionId)
+            if (!target || target.kind !== 'beta') return state
+
+            const next = reindexBetas(state.entities.sections.filter((s) => s.id !== target.id))
+            const activeSectionId =
+                state.activeSectionId === target.id
+                    ? (next[0]?.id ?? null)
+                    : state.activeSectionId
+
+            return {
+                ...state,
+                entities: { sections: next },
+                activeSectionId,
+                selected: state.selected?.sectionId === target.id ? null : state.selected,
+            }
+        }
+
+        // ---------------- Entity ops scoped to section ----------------
+        case 'ENTITY_ADD': {
+            const { sectionId, entityType, data } = action.payload
+
+            const sections = state.entities.sections
+            const sIdx = sections.findIndex((s) => s.id === sectionId)
+            if (sIdx === -1) return state
+
+            const section = sections[sIdx]
+
+            // blocăm wait* în beta
+            if (
+                (entityType === EntityTypes.WAIT_TITLES || entityType === EntityTypes.WAIT_LOCATIONS) &&
+                section.kind !== 'invited'
+            ) return state
+
+            const entity = makeEntity(entityType, data)
+
+            // ✅ CANONICAL INSERT RULE:
+            // insert AFTER last occupied slot for this entityType
+            const insertIndex = getInsertIndexAfterLastOccupied(section.rows, entityType)
+            const rowsEnsured = ensureRowExists(section.rows, insertIndex)
+
+            const nextRows = rowsEnsured.map((r, i) =>
+                i === insertIndex ? setSlot(r, entityType, entity) : r
+            )
+
+            const nextSections = sections.map((s, i) =>
+                i === sIdx ? { ...section, rows: nextRows } : s
+            )
+
+            return {
+                ...state,
+                entities: { ...state.entities, sections: nextSections },
+                activeSectionId: sectionId,
                 activeEntityType: entityType,
             }
         }
 
         case 'ENTITY_UPDATE': {
-            const { entityType, id, data } = action.payload
-
-            if (entityType === EntityTypes.TITLES) {
-                return {
-                    ...state,
-                    entities: {
-                        ...state.entities,
-                        titles: state.entities.titles.map((t) => {
-                            if (t.id !== id) return t
-                            if (t.kind !== 'title') return t
-                            return {
-                                ...t,
-                                ...data,
-                                title: String((data as any).title ?? t.title),
-                            }
-                        }),
-                    },
-                }
-            }
-
-            return {
-                ...state,
-                entities: {
-                    ...state.entities,
-                    [entityType]: state.entities[entityType].map((e) =>
-                        e.id === id ? { ...e, ...data } : e
-                    ),
-                },
-            }
+            const { sectionId, entityType, id, data } = action.payload
+            const sections = state.entities.sections.map((s) => {
+                if (s.id !== sectionId) return s
+                if (!canUseWait(s.kind, entityType)) return s
+                return updateEntityInSection(s, entityType, id, data)
+            })
+            return { ...state, entities: { sections } }
         }
 
         case 'ENTITY_DELETE': {
-            const { entityType, id } = action.payload
-            const nextOnAir = { ...state.onAir }
-            if (nextOnAir[entityType] === id) {
-                delete nextOnAir[entityType]
-            }
+            const { sectionId, entityType, id } = action.payload
 
-            if (entityType === EntityTypes.TITLES) {
-                return {
-                    ...state,
-                    entities: {
-                        ...state.entities,
-                        titles: state.entities.titles.filter((t) => t.id !== id),
-                    },
-                    selected: state.selected?.id === id ? null : state.selected,
-                    onAir: nextOnAir,
-                }
-            }
+            const nextOnAir = { ...state.onAir }
+            if (nextOnAir[entityType] === id) delete nextOnAir[entityType]
+
+            const sections = state.entities.sections.map((s) => {
+                if (s.id !== sectionId) return s
+                if (!canUseWait(s.kind, entityType)) return s
+                return deleteEntityInSection(s, entityType, id)
+            })
+
+            const selected =
+                state.selected?.id === id ? null : state.selected
 
             return {
                 ...state,
-                entities: {
-                    ...state.entities,
-                    [entityType]: state.entities[entityType].filter(
-                        (e) => e.id !== id
-                    ),
-                },
-                selected:
-                    state.selected?.id === id ? null : state.selected,
+                entities: { sections },
+                selected,
                 onAir: nextOnAir,
             }
         }
@@ -167,23 +376,22 @@ export function csvReducer(state: CsvState, action: CsvAction): CsvState {
                 entities: action.payload,
                 selected: null,
                 onAir: {},
+                activeSectionId: action.payload.sections[0]?.id ?? null,
             }
 
-        case 'SELECT_ENTITY':
+        // ---------------- Active/Selected ----------------
+        case 'SET_ACTIVE_ENTITY_TYPE':
+            return { ...state, activeEntityType: action.payload }
+
+        case 'SET_SELECTED':
             return {
                 ...state,
                 selected: action.payload,
-                activeEntityType:
-                    action.payload?.type ?? state.activeEntityType,
+                activeEntityType: action.payload?.entityType ?? state.activeEntityType,
+                activeSectionId: action.payload?.sectionId ?? state.activeSectionId,
             }
 
-        case 'SET_ACTIVE_ENTITY_TYPE':
-            return {
-                ...state,
-                activeEntityType: action.payload,
-            }
-
-        // 🆕 ON AIR
+        // ---------------- ON AIR (kept) ----------------
         case 'SET_ON_AIR':
             return {
                 ...state,
@@ -196,57 +404,8 @@ export function csvReducer(state: CsvState, action: CsvAction): CsvState {
         case 'CLEAR_ON_AIR': {
             const next = { ...state.onAir }
             delete next[action.payload.type]
-            return {
-                ...state,
-                onAir: next,
-            }
+            return { ...state, onAir: next }
         }
-
-        // ✅ Canonical: SET_SELECTED should also sync active tab
-        case 'SET_SELECTED':
-            return {
-                ...state,
-                selected: action.payload,
-                activeEntityType: action.payload?.type ?? state.activeEntityType,
-            }
-
-        // 🆕 delimiter support
-        case 'TITLE_ADD_DELIMITER_AFTER': {
-            const title = state.entities.titles.find((t) => t.id === action.payload.titleId)
-            if (!title || typeof title.rowIndex !== 'number') return state
-
-            const desired = title.rowIndex + 1
-            const rowIndex = nextFreeRowIndex(state.entities, desired)
-
-            // avoid duplicates at same rowIndex
-            const exists = state.entities.titles.some((t) => t.kind === 'delimiter' && t.rowIndex === rowIndex)
-            if (exists) return state
-
-            const delim: TitleDelimiter = {
-                id: uuidv4(),
-                kind: 'delimiter',
-                rowIndex,
-            }
-
-            return {
-                ...state,
-                entities: {
-                    ...state.entities,
-                    titles: [...state.entities.titles, delim].sort(
-                        (a, b) => (a.rowIndex ?? 0) - (b.rowIndex ?? 0)
-                    ),
-                },
-            }
-        }
-
-        case 'TITLE_DELETE_DELIMITER':
-            return {
-                ...state,
-                entities: {
-                    ...state.entities,
-                    titles: state.entities.titles.filter((t) => t.id !== action.payload.delimiterId),
-                },
-            }
 
         default:
             return state

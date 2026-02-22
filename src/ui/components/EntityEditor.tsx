@@ -1,15 +1,9 @@
 // src/ui/components/EntityEditor.tsx
-import { useEffect, useRef, useState } from 'react'
-import {
-    useEntities,
-    useSelectedEntity,
-    useActiveEntityType,
-} from '@/features/csv-editor'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useEntities, useSelectedEntity, useActiveEntityType } from '@/features/csv-editor'
 import { Preview16x9 } from './Preview16x9'
 import { QuickTitlesBar } from './QuickTitlesBar'
 import { InputField } from './common/InputField'
-import { useOnAir } from '@/features/csv-editor'
-
 
 type FormState = {
     title?: string
@@ -18,187 +12,139 @@ type FormState = {
     location?: string
 }
 
-export function EntityEditor() {
-    const { getEntities, addEntity, updateEntity } =
-        useEntities()
-    const { selected, clearSelection } = useSelectedEntity()
-    const { activeEntityType } = useActiveEntityType()
-    const [showInvalid, setShowInvalid] = useState(false)
+type EntityType =
+    | 'titles'
+    | 'persons'
+    | 'locations'
+    | 'hotTitles'
+    | 'waitTitles'
+    | 'waitLocations'
 
+export function EntityEditor() {
+    const { activeSectionId, activeSection, getBlockItems, addEntity, updateEntity } = useEntities()
+
+    const { selected, clearSelection } = useSelectedEntity()
+    const { activeEntityType, setActiveEntityType } = useActiveEntityType()
+
+    const [showInvalid, setShowInvalid] = useState(false)
     const [form, setForm] = useState<FormState>({})
 
-    const { isOnAir } = useOnAir()
-
-    const isActiveOnAir =
-        selected &&
-        isOnAir(activeEntityType, selected.id)
-
-
-    // 🔑 refs pentru focus
+    // refs focus
     const titleRef = useRef<HTMLInputElement>(null)
     const nameRef = useRef<HTMLInputElement>(null)
     const occupationRef = useRef<HTMLInputElement>(null)
     const locationRef = useRef<HTMLInputElement>(null)
 
-    const selectedEntity = selected
-        ? getEntities<any>(selected.type).find(
-            (e) => e.id === selected.id
-        )
-        : null
+    const sectionId = activeSectionId ?? activeSection?.id ?? ''
+    const isInvited = activeSection?.kind === 'invited'
 
-    // ✅ Guard: dacă din orice motiv e selectat un delimiter, ieșim din edit mode
-    useEffect(() => {
-        if (
-            activeEntityType === 'titles' &&
-            selectedEntity &&
-            (selectedEntity as any).kind === 'delimiter'
-        ) {
-            clearSelection()
-            setForm({})
-            // focus pe inputul primary (titlu) ca să poți adăuga imediat un title nou
-            focusPrimaryInput()
+    // ✅ memoize list + selectedItem (prevents "Maximum update depth exceeded")
+    const selectedItems = useMemo(() => {
+        if (!selected) return []
+        return getBlockItems(selected.sectionId, selected.entityType)
+    }, [getBlockItems, selected?.sectionId, selected?.entityType])
+
+    const selectedItem = useMemo(() => {
+        if (!selected) return null
+        return selectedItems.find((x: any) => x.id === selected.id) ?? null
+    }, [selectedItems, selected?.id])
+
+    // ---- helpers ----
+    const focusPrimaryInput = useCallback(() => {
+        let el: HTMLInputElement | null = null
+
+        if (activeEntityType === 'persons') el = nameRef.current
+        else if (activeEntityType === 'locations' || activeEntityType === 'waitLocations') el = locationRef.current
+        else el = titleRef.current
+
+        if (!el) return
+        el.focus()
+        const len = el.value.length
+        try {
+            el.setSelectionRange(len, len)
+        } catch {
+            // ignore (some inputs might not support selection range)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeEntityType, selectedEntity])
+    }, [activeEntityType])
 
+    const focusTitleInput = useCallback(() => {
+        const el = titleRef.current
+        if (!el) return
+        el.focus()
+        const len = el.value.length
+        try {
+            el.setSelectionRange(len, len)
+        } catch {
+            // ignore
+        }
+    }, [])
 
-    // 🧠 Populare form
+    // ✅ populate form (ONLY when selection identity changes)
     useEffect(() => {
-        if (!selectedEntity) {
+        if (!selected || !selectedItem) {
             setForm({})
             return
         }
 
-        switch (activeEntityType) {
+        const data = (selectedItem as any).data
+
+        switch (selected.entityType) {
             case 'persons':
                 setForm({
-                    name: selectedEntity.name ?? '',
-                    occupation: selectedEntity.occupation ?? '',
+                    name: data?.name ?? '',
+                    occupation: data?.occupation ?? '',
                 })
                 break
 
             case 'locations':
             case 'waitLocations':
                 setForm({
-                    location: selectedEntity.location ?? '',
+                    location: data?.location ?? '',
                 })
                 break
 
             default:
                 setForm({
-                    title: selectedEntity.title ?? '',
+                    title: data?.title ?? '',
                 })
         }
-    }, [selectedEntity, activeEntityType])
+    }, [selected?.id, selected?.entityType, selected?.sectionId, selectedItem])
 
-    // 🎯 AUTOFOCUS ORICÂND SE SCHIMBĂ CONTEXTUL
+    // ✅ autofocus whenever context changes (tab, selection, section)
     useEffect(() => {
-        // Person → focus Nume
-        if (activeEntityType === 'persons' && nameRef.current) {
-            const el = nameRef.current
-            el.focus()
-            el.setSelectionRange(el.value.length, el.value.length)
-            return
-        }
+        focusPrimaryInput()
+    }, [focusPrimaryInput, activeEntityType, selected?.id, selected?.sectionId])
 
-        // Locations → focus Locație
-        if (
-            (activeEntityType === 'locations' ||
-                activeEntityType === 'waitLocations') &&
-            locationRef.current
-        ) {
-            const el = locationRef.current
-            el.focus()
-            el.setSelectionRange(el.value.length, el.value.length)
-            return
-        }
-
-        // Titles / rest → focus Titlu
-        if (titleRef.current) {
-            const el = titleRef.current
-            el.focus()
-            el.setSelectionRange(el.value.length, el.value.length)
-        }
-    }, [activeEntityType, selectedEntity])
-
+    // ✅ ESC clears selection + resets editor
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && selected) {
-                e.preventDefault()
-                clearSelection()
-                setForm({})
-                focusPrimaryInput()
-            }
+            if (e.key !== 'Escape') return
+            if (!selected) return
+
+            e.preventDefault()
+            clearSelection()
+            setForm({})
+            // keep same activeEntityType, but return to create mode
+            requestAnimationFrame(() => focusPrimaryInput())
         }
 
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [selected])
-
+    }, [selected, clearSelection, focusPrimaryInput])
 
     const updateField = (key: keyof FormState, value: string) => {
         setForm((prev) => ({ ...prev, [key]: value }))
     }
 
-    const normalizeForm = (form: FormState): FormState => {
-        const next = { ...form }
-
+    // ✅ normalize only at SAVE time (prevents cursor jumping while editing)
+    const normalizeForm = (f: FormState): FormState => {
+        const next = { ...f }
         if (next.title) next.title = next.title.toUpperCase()
         if (next.name) next.name = next.name.toUpperCase()
         if (next.location) next.location = next.location.toUpperCase()
-
-        // occupation rămâne mixed-case
+        // occupation stays mixed-case
         return next
     }
-
-    const saveEntity = () => {
-        if (!isFormValid()) {
-            setShowInvalid(true)
-
-            // reset feedback după scurt timp
-            setTimeout(() => setShowInvalid(false), 600)
-            return
-        }
-
-        const payload = normalizeForm(form)
-
-        if (selected && selectedEntity) {
-            updateEntity(activeEntityType, selected.id, payload)
-            clearSelection()
-        } else {
-            addEntity(activeEntityType, payload)
-        }
-
-        setForm({})
-    }
-
-
-
-    const focusTitleInput = () => {
-        if (titleRef.current) {
-            titleRef.current.focus()
-            titleRef.current.setSelectionRange(
-                titleRef.current.value.length,
-                titleRef.current.value.length
-            )
-        }
-    }
-
-
-    const applyQuickTitle = (prefix: string) => {
-        setForm((prev) => {
-            const current = prev.title ?? ''
-
-            // elimină orice prefix existent de tip "TEXT: "
-            const cleaned = current.replace(/^[^:]+:\s*/, '')
-
-            return {
-                ...prev,
-                title: `${prefix} ${cleaned}`,
-            }
-        })
-    }
-
 
     const isFormValid = (): boolean => {
         switch (activeEntityType) {
@@ -217,154 +163,132 @@ export function EntityEditor() {
         }
     }
 
+    const saveEntity = () => {
+        if (!isFormValid()) {
+            setShowInvalid(true)
+            setTimeout(() => setShowInvalid(false), 600)
+            return
+        }
 
-    const focusPrimaryInput = () => {
-        let el: HTMLInputElement | null = null
+        const payload = normalizeForm(form)
 
-        if (activeEntityType === 'persons') {
-            el = nameRef.current
-        } else if (
-            activeEntityType === 'locations' ||
-            activeEntityType === 'waitLocations'
-        ) {
-            el = locationRef.current
+        if (selected && selectedItem) {
+            updateEntity(selected.sectionId, selected.entityType, selected.id, payload)
+            clearSelection()
         } else {
-            // titles, hotTitles, waitTitles
-            el = titleRef.current
+            // create mode: use active section + active entity type
+            addEntity(sectionId, activeEntityType, payload)
         }
 
-        if (el) {
-            el.focus()
-            const len = el.value.length
-            el.setSelectionRange(len, len)
-        }
+        setForm({})
+        requestAnimationFrame(() => focusPrimaryInput())
     }
 
+    // ✅ QuickTitle: insert at beginning; if already has "XXX: " prefix, replace it
+    const applyQuickTitle = (prefix: string) => {
+        setForm((prev) => {
+            const current = prev.title ?? ''
+            const cleaned = current.replace(/^[^:]+:\s*/, '')
+            const nextTitle = `${prefix} ${cleaned}`.trim()
+            return { ...prev, title: nextTitle }
+        })
 
+        requestAnimationFrame(() => focusTitleInput())
+    }
 
+    // ✅ Buttons: force create-mode for a given entity type
+    const startCreate = (type: EntityType) => {
+        clearSelection()
+        setActiveEntityType(type)
+        setForm({})
+        // focus handled by effect
+    }
 
     const previewContent =
         activeEntityType === 'persons' ? (
             <div className="flex flex-col leading-tight">
-      <span className="font-semibold uppercase truncate">
-        {form.name ?? 'NUME'}
-      </span>
-                <span className="text-sm text-gray-300 truncate">
-        {form.occupation ?? 'functie'}
-      </span>
+                <span className="font-semibold uppercase truncate">{form.name ?? 'NUME'}</span>
+                <span className="text-sm text-gray-300 truncate">{form.occupation ?? 'functie'}</span>
             </div>
         ) : (
-            <span className="font-semibold uppercase truncate">
-      {form.title ?? form.location ?? 'TITLU'}
-    </span>
+            <span className="font-semibold uppercase truncate">{form.title ?? form.location ?? 'TITLU'}</span>
         )
 
+    // ✅ measureText is plain string => scaleX recalculates LIVE while typing
     const previewMeasureText =
         activeEntityType === 'persons'
             ? `${form.name ?? ''} ${form.occupation ?? ''}`.trim()
             : (form.title ?? form.location ?? 'TITLU').trim()
 
-
     return (
-        <div className="bg-white rounded border p-4 flex flex-col gap-4 max-w-[100%]">
-            <Preview16x9
-                entityType={activeEntityType}
-                content={previewContent}
-                measureText={previewMeasureText}
-            />
+        <div className="bg-white rounded border p-4 flex flex-col gap-4">
 
-            <div className="relative">
-                <div className="flex flex-col gap-3 w-full font-bold">
-                    {activeEntityType === 'persons' && (
-                        <>
-                            <InputField
-                                label="Nume"
-                                value={form.name ?? ''}
-                                uppercase
-                                inputRef={nameRef}
-                                onChange={(v) => updateField('name', v)}
-                                onEnter={() => occupationRef.current?.focus()}
-                                invalid={showInvalid}
-                            />
+            <Preview16x9 entityType={activeEntityType} content={previewContent} measureText={previewMeasureText} />
 
-                            <InputField
-                                label="Funcție"
-                                value={form.occupation ?? ''}
-                                inputRef={occupationRef}
-                                onChange={(v) =>
-                                    updateField('occupation', v)
-                                }
-                                onEnter={saveEntity}
-                            />
-                        </>
-                    )}
-
-                    {(activeEntityType === 'locations' ||
-                        activeEntityType === 'waitLocations') && (
+            {/* inputs */}
+            <div className="flex flex-col gap-3 w-full font-bold">
+                {activeEntityType === 'persons' && (
+                    <>
                         <InputField
-                            label="Locație"
-                            value={form.location ?? ''}
+                            label="Nume"
+                            value={form.name ?? ''}
                             uppercase
-                            inputRef={locationRef}
-                            onChange={(v) => updateField('location', v)}
-                            onEnter={saveEntity}
+                            inputRef={nameRef}
+                            onChange={(v) => updateField('name', v)}
+                            onEnter={() => occupationRef.current?.focus()}
                             invalid={showInvalid}
                         />
 
-                    )}
-
-                    {(activeEntityType === 'titles' ||
-                        activeEntityType === 'hotTitles' ||
-                        activeEntityType === 'waitTitles') && (
                         <InputField
-                            label="Titlu"
-                            value={form.title ?? ''}
-                            uppercase
-                            inputRef={titleRef}
-                            onChange={(v) => updateField('title', v)}
+                            label="Funcție"
+                            value={form.occupation ?? ''}
+                            inputRef={occupationRef}
+                            onChange={(v) => updateField('occupation', v)}
                             onEnter={saveEntity}
-                            invalid={showInvalid}
                         />
-
-                    )}
-                </div>
-                {selected && (
-                    <button
-                        onClick={() => {
-                            clearSelection()
-                            setForm({})
-                            focusPrimaryInput()
-                        }}
-                        className="text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 absolute right-1 top-[27px] border-2 border-gray-300 px-2 py-2 rounded"
-                    >
-                        ESC
-                    </button>
+                    </>
                 )}
 
+                {(activeEntityType === 'locations' || activeEntityType === 'waitLocations') && (
+                    <InputField
+                        label="Locație"
+                        value={form.location ?? ''}
+                        uppercase
+                        inputRef={locationRef}
+                        onChange={(v) => updateField('location', v)}
+                        onEnter={saveEntity}
+                        invalid={showInvalid}
+                    />
+                )}
+
+                {(activeEntityType === 'titles' || activeEntityType === 'hotTitles' || activeEntityType === 'waitTitles') && (
+                    <InputField
+                        label="Titlu"
+                        value={form.title ?? ''}
+                        uppercase
+                        inputRef={titleRef}
+                        onChange={(v) => updateField('title', v)}
+                        onEnter={saveEntity}
+                        invalid={showInvalid}
+                    />
+                )}
             </div>
 
             <button
                 onClick={saveEntity}
                 disabled={!isFormValid()}
                 className={`py-2 rounded text-white ${
-                    isFormValid()
-                        ? 'bg-green-600 hover:bg-green-700'
-                        : 'bg-gray-400 cursor-not-allowed'
+                    isFormValid() ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
                 }`}
             >
                 {selected ? 'Update' : 'Adaugă'}
             </button>
 
+            {/* QuickTitles doar la TITLES */}
             {activeEntityType === 'titles' && (
                 <div className="border-t pt-3 mt-2">
-                    <div className="text-xs text-gray-500 mb-2">
-                        Prefixe rapide
-                    </div>
-
-                    <QuickTitlesBar
-                        onApplyPrefix={applyQuickTitle}
-                        focusEditor={focusTitleInput}
-                    />
+                    <div className="text-xs text-gray-500 mb-2">Prefixe rapide</div>
+                    <QuickTitlesBar onApplyPrefix={applyQuickTitle} focusEditor={focusTitleInput} />
                 </div>
             )}
         </div>

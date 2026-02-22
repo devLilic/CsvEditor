@@ -51,9 +51,10 @@ export function useCsvInitialization() {
             }
 
             // 3️⃣ nimic ales → aplicația rămâne loaded cu state gol
+            // IMPORTANT: payload explicit, predictibil pentru QA (reducerul va asigura INVITATI)
             dispatch({
                 type: 'CSV_LOADED',
-                payload: state.entities,
+                payload: { sections: [] },
             })
         })()
     }, [dispatch, state.isLoaded, state.entities])
