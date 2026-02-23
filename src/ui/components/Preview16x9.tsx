@@ -1,58 +1,57 @@
 // src/ui/components/Preview16x9.tsx
-import type {ReactNode} from 'react'
-import {useMemo, useState} from 'react'
-import type {EntityType} from '@/features/csv-editor'
-import {useScaleToFit} from '@/features/csv-editor/hooks/useScaleToFit'
-import {usePreviewLayout} from '@/features/csv-editor/hooks/usePreviewLayout'
+import type { ReactNode } from 'react'
+import { useMemo } from 'react'
+import type { EntityType } from '@/features/csv-editor'
+import { useScaleToFit } from '@/features/csv-editor/hooks/useScaleToFit'
+import { usePreviewLayout } from '@/features/csv-editor/hooks/usePreviewLayout'
+
+// Importăm componentele grafice
+import type { GraphicsProps } from './preview-graphics/types'
+import { TitleGraphics } from './preview-graphics/TitleGraphics'
+import { PersonGraphics } from './preview-graphics/PersonGraphics'
+import { LocationGraphics } from './preview-graphics/LocationGraphics'
+import { FallbackGraphics } from './preview-graphics/FallbackGraphics'
+import {HotTitleGraphics} from "@/ui/components/preview-graphics/HotTitleGraphics";
+import {WaitLocationGraphics, WaitTitleGraphics} from "@/ui/components/preview-graphics/WaitGraphics";
 
 interface PreviewProps {
     content: ReactNode
     entityType: EntityType
-
-    /**
-     * IMPORTANT:
-     * Text simplu folosit DOAR pentru măsurare în useScaleToFit.
-     * (content poate fi JSX -> altfel toPlainText devine '' și scaleX nu se recalculează)
-     */
     measureText: string
 }
 
-export function Preview16x9({content, entityType, measureText}: PreviewProps) {
-    // ✅ Single Source of Truth for layout (măsurat real, DPI/monitor safe)
-    const {previewRef, titleContainerRef, titleSize} = usePreviewLayout()
+// ==========================================
+// 🗺️ MAPAREA ENTITĂȚILOR LA COMPONENTE
+// ==========================================
+const GRAPHICS_MAP: Record<string, React.FC<GraphicsProps>> = {
+    titles: TitleGraphics,
+    persons: PersonGraphics,
+    locations: LocationGraphics,
+    hotTitles: HotTitleGraphics,
+    waitTitles: WaitTitleGraphics,
+    waitLocations: WaitLocationGraphics,
+}
+
+// ==========================================
+// ⚙️ COMPONENTA PRINCIPALĂ WRAPPER
+// ==========================================
+export function Preview16x9({ content, entityType, measureText }: PreviewProps) {
+    const { previewRef, titleContainerRef, titleSize } = usePreviewLayout()
     const availableWidth = titleSize.width
     const isLayoutReady = availableWidth > 0
 
-    /**
-     * ✅ UI TUNING STATE (local, fără logic)
-     * Modifici rapid poziția/dimensiunea containerului și stilul textului.
-     */
-    const [tuning] = useState(() => ({
-        // container positioning / sizing (procente față de preview)
-        leftPct: 5,
-        bottomPct: 11.8,
-        widthPct: 73.5,
-
-        // typography
-        fontFamily: 'Arial',
-        fontSizePx: 32, // pornește cu ce corespunde template-ului tău
-        trackingEm: -0.006,
-
-        // optional: debug
-        showDebugBorder: false,
-    }))
-
-    // ⚠️ Normalize measure text (uppercase preview rule)
     const textForMeasure = useMemo(() => {
         const t = measureText ?? ''
         return t.toUpperCase()
     }, [measureText])
 
-    // ✅ scaleX depends ONLY on availableWidth + real text width
-    const {textRef, scaleX} = useScaleToFit(textForMeasure, {
+    const { textRef, scaleX } = useScaleToFit(textForMeasure, {
         deps: [entityType, availableWidth, textForMeasure],
         availableWidth,
     })
+
+    // Selectăm componenta grafică bazată pe tipul entității
+    const ActiveGraphicsComponent = GRAPHICS_MAP[entityType] || FallbackGraphics
 
     return (
         <div
@@ -63,42 +62,21 @@ export function Preview16x9({content, entityType, measureText}: PreviewProps) {
                 bg-black
                 bg-center bg-no-repeat bg-contain
             "
-            style={{backgroundImage: "url('./news.png')"}}
+            style={{ backgroundImage: "url('./news.png')" }}
         >
-            <span className="absolute top-2 left-2 text-xs text-white/70">
+            {/* Tag-ul de debug pentru a vedea ce preview e activ */}
+            <span className="absolute top-2 left-2 text-xs text-white/70 z-10 bg-black/50 px-1 rounded">
                 PREVIEW – {entityType.toUpperCase()}
             </span>
 
-            {/* Title container (SSoT: width is measured via ref; UI tuning only changes placement/size) */}
-            <div
-                ref={titleContainerRef}
-                className={`
-                    absolute
-                    overflow-hidden
-                    whitespace-nowrap
-                    text-blue-900
-                    font-bold
-                    ${tuning.showDebugBorder ? 'ring-2 ring-fuchsia-500' : ''}
-                `}
-                style={{
-                    left: `${tuning.leftPct}%`,
-                    bottom: `${tuning.bottomPct}%`,
-                    width: `${tuning.widthPct}%`,
-                    fontFamily: tuning.fontFamily,
-                    letterSpacing: `${tuning.trackingEm}em`,
-                }}>
-                {/* scaleX ONLY on text element */}
-                <span
-                    ref={textRef}
-                    className="inline-block origin-left leading-none"
-                    style={{
-                        transform: `scaleX(${scaleX})`,
-                        opacity: isLayoutReady ? 1 : 0, // anti-jump
-                        fontSize: `${tuning.fontSizePx}px`,
-                    }}>
-                    {content ?? <span className="opacity-40">Preview</span>}
-                </span>
-            </div>
+            {/* Aici randăm componenta specifică și îi pasăm funcțiile de redimensionare */}
+            <ActiveGraphicsComponent
+                content={content}
+                containerRef={titleContainerRef}
+                textRef={textRef}
+                scaleX={scaleX}
+                isLayoutReady={isLayoutReady}
+            />
         </div>
     )
 }

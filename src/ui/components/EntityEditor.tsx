@@ -204,17 +204,16 @@ export function EntityEditor() {
         // focus handled by effect
     }
 
+    // ✅ Trimitem date brute (text/array) către Preview16x9, nu JSX
     const previewContent =
-        activeEntityType === 'persons' ? (
-            <div className="flex flex-col leading-tight">
-                <span className="font-semibold uppercase truncate">{form.name ?? 'NUME'}</span>
-                <span className="text-sm text-gray-300 truncate">{form.occupation ?? 'functie'}</span>
-            </div>
-        ) : (
-            <span className="font-semibold uppercase truncate">{form.title ?? form.location ?? 'TITLU'}</span>
-        )
+        activeEntityType === 'persons'
+            ? [
+                (form.name && form.name.trim() !== '') ? form.name.toUpperCase() : 'NUME',
+                (form.occupation && form.occupation.trim() !== '') ? form.occupation : 'FUNCȚIE'
+            ]
+            : (form.title || form.location || (activeEntityType === 'locations' || activeEntityType === 'waitLocations' ? 'LOCAȚIE' : 'TITLU')).toUpperCase()
 
-    // ✅ measureText is plain string => scaleX recalculates LIVE while typing
+    // ✅ measureText rămâne un string simplu, exact cum îl aveai
     const previewMeasureText =
         activeEntityType === 'persons'
             ? `${form.name ?? ''} ${form.occupation ?? ''}`.trim()

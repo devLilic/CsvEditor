@@ -19,7 +19,9 @@ export function EditorBody() {
             <div className="min-h-0 flex flex-col gap-3">
                 {activeSection?.kind !== 'invited' ? <div className="bg-white rounded border p-2">
                     <EditorActionsBar />
-                </div> : null}
+                </div> : <div className="bg-white rounded border p-2 h-12">
+
+                </div>}
 
 
                 <EntityEditor />

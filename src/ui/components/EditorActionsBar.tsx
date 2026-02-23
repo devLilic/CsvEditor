@@ -7,12 +7,13 @@ type Action = { type: EntityType; label: string }
 const BETA_ACTIONS: Action[] = [
     { type: 'titles', label: '+ Titlu' },
     { type: 'persons', label: '+ Nume' },
-    { type: 'locations', label: '+ Locație' },
-    { type: 'hotTitles', label: '+ Ultima Oră' },
+
 ]
 
 const INVITED_ACTIONS: Action[] = [
     ...BETA_ACTIONS,
+    { type: 'locations', label: '+ Locație' },
+    { type: 'hotTitles', label: '+ Ultima Oră' },
     { type: 'waitTitles', label: '+ Titlu Așteptare' },
     { type: 'waitLocations', label: '+ Locație Așteptare' },
 ]
@@ -35,7 +36,7 @@ export function EditorActionsBar() {
                 <button
                     key={a.type}
                     onClick={() => onAction(a.type)}
-                    className="px-3 py-1 rounded text-sm border bg-white hover:bg-gray-50"
+                    className="px-3 py-1 rounded text-sm border bg-white hover:bg-green-500 hover:text-white hover:border-green-600"
                 >
                     {a.label}
                 </button>

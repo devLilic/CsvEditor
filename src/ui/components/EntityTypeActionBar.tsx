@@ -14,10 +14,10 @@ export function EntityTypeActionBar() {
     const buttons: Array<{ type: EntityType; label: string }> = [
         { type: 'titles', label: '+ Titlu' },
         { type: 'persons', label: '+ Nume' },
-        { type: 'locations', label: '+ Locație' },
-        { type: 'hotTitles', label: '+ Ultima Oră' },
         ...(isInvited
             ? ([
+                { type: 'locations', label: '+ Locație' },
+                { type: 'hotTitles', label: '+ Ultima Oră' },
                 { type: 'waitTitles', label: '+ Titlu Așteptare' },
                 { type: 'waitLocations', label: '+ Locație Așteptare' },
             ] as Array<{ type: EntityType; label: string }>)
