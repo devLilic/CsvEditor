@@ -5,6 +5,8 @@ import { ConfirmDialog } from '../common/ConfirmDialog'
 import { EditModeToggle } from '@/ui/components/EditModeToggle'
 import { Link } from 'react-router-dom'
 import {SectionsTabs} from "@/ui/components/SectionsTabs";
+import {AudioSourceSelector} from "@/ui/components/AudioSourceSelector";
+import {AiAssistantPanel} from "@/ui/components/AiAssistantPanel";
 
 export function EditorHeader() {
     const { clearAll, loadCsv, activeSectionId } = useEntities()
@@ -27,6 +29,7 @@ export function EditorHeader() {
                 >
                     <button className="bg-red-600 text-white px-4 py-1 rounded">Clear All</button>
                 </ConfirmDialog>
+                
 
                 <Link to="/settings" className="px-3 py-1 rounded border bg-white hover:bg-gray-50">
                     Settings

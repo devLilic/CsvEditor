@@ -4,6 +4,7 @@ import { useEntities, useSelectedEntity, useActiveEntityType } from '@/features/
 import { Preview16x9 } from './Preview16x9'
 import { QuickTitlesBar } from './QuickTitlesBar'
 import { InputField } from './common/InputField'
+import {AiAssistantPanel} from "@/features/ai-assistant/components/AiAssistantPanel";
 
 type FormState = {
     title?: string
@@ -222,7 +223,10 @@ export function EntityEditor() {
     return (
         <div className="bg-white rounded border p-4 flex flex-col gap-4">
 
-            <Preview16x9 entityType={activeEntityType} content={previewContent} measureText={previewMeasureText} />
+            <div className='flex justify-between items-start'>
+                <Preview16x9 entityType={activeEntityType} content={previewContent} measureText={previewMeasureText} />
+                <AiAssistantPanel />
+            </div>
 
             {/* inputs */}
             <div className="flex flex-col gap-3 w-full font-bold">

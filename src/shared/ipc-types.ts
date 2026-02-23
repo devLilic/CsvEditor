@@ -17,6 +17,11 @@ export interface CsvBackupResponse {
     backupPath?: string
 }
 
+export interface AiActionResponse {
+    ok: boolean
+    error?: string
+}
+
 export type AppConfig = Record<string, unknown>
 
 export interface IpcInvokeMap {
@@ -59,6 +64,17 @@ export interface IpcInvokeMap {
         request: AppConfig
         response: AppConfig
     }
+
+    // ✅ AI ASSISTANT INVOKES (Cerere -> Răspuns)
+    [IPC_CHANNELS.AI_START_LISTENING]: {
+        request: void
+        response: AiActionResponse
+    }
+
+    [IPC_CHANNELS.AI_STOP_LISTENING]: {
+        request: void
+        response: AiActionResponse
+    }
 }
 
 export type IpcChannel = keyof IpcInvokeMap
@@ -78,4 +94,17 @@ export interface RendererApi {
 
     getAppConfig(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_GET_CONFIG>>
     setAppConfig(cfg: IpcRequest<typeof IPC_CHANNELS.SETTINGS_SET_CONFIG>): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SET_CONFIG>>
+
+    // ✅ AI ASSISTANT METHODS
+    // 1. Control
+    startAiListening(): Promise<IpcResponse<typeof IPC_CHANNELS.AI_START_LISTENING>>
+    stopAiListening(): Promise<IpcResponse<typeof IPC_CHANNELS.AI_STOP_LISTENING>>
+
+    // 2. Trimitere Date (Fire & Forget, nu așteaptă răspuns)
+    sendAiAudioChunk(chunk: Float32Array | Uint8Array): void
+
+    // 3. Ascultare Evenimente de la Backend (Returnează o funcție de "unsubscribe" pentru a opri ascultarea)
+    onAiTranscription(callback: (text: string) => void): () => void
+    onAiSuggestedTitle(callback: (title: string) => void): () => void
+    onAiError(callback: (error: string) => void): () => void
 }

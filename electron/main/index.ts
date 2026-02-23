@@ -6,6 +6,7 @@ import os from 'node:os'
 import { update } from './update'
 import { registerCsvHandlers } from './csv-handlers'
 import { registerSettingsHandlers } from './settings-handlers'
+import {registerAiHandlers} from "./ai-handlers";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -79,6 +80,8 @@ async function createWindow() {
   // =========================
   registerCsvHandlers(win)
   registerSettingsHandlers()
+  // ✅ NOU: Înregistrăm handlerele AI
+  registerAiHandlers(win)
   // =========================
 
   // Test actively push message to the Electron-Renderer
