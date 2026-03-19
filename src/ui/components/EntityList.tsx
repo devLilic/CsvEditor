@@ -1,120 +1,127 @@
 // src/ui/components/EntityList.tsx
-import type { EntityType, Person, Location, SimpleTitle } from '@/features/csv-editor'
-import { useEntities, useSelectedEntity, useOnAir } from '@/features/csv-editor'
+import {
+    useEntities,
+    useSelectedEntity,
+    useActiveEntityType,
+    useOnAir,
+} from '@/features/csv-editor'
 import { EmptyState } from './common/EmptyState'
 import { useEditMode } from '@/ui/context/EditModeContext'
+import type { EntityType } from '@/features/csv-editor'
 
-type BlockItem =
-    | { entityType: 'titles'; id: string; rowId: string; data: SimpleTitle }
-    | { entityType: 'persons'; id: string; rowId: string; data: Person }
-    | { entityType: 'locations'; id: string; rowId: string; data: Location }
-    | { entityType: 'hotTitles'; id: string; rowId: string; data: SimpleTitle }
-    | { entityType: 'waitTitles'; id: string; rowId: string; data: SimpleTitle }
-    | { entityType: 'waitLocations'; id: string; rowId: string; data: Location }
+export function EntityList() {
+    const { activeSectionId, activeSection, getBlockItems, deleteEntity } =
+        useEntities()
 
-interface EntityListProps {
-    sectionId: string
-    entityType: EntityType
-    title?: string
-}
-
-const LABELS: Record<EntityType, string> = {
-    titles: 'Titluri',
-    persons: 'Persoane',
-    locations: 'Locații',
-    hotTitles: 'Ultima Oră',
-    waitTitles: 'Titluri Așteptare',
-    waitLocations: 'Locații Așteptare',
-}
-
-export function EntityList({ sectionId, entityType, title }: EntityListProps) {
-    const { getBlockItems, deleteEntity } = useEntities()
+    const { activeEntityType } = useActiveEntityType()
     const { select, isSelected } = useSelectedEntity()
     const { isOnAir, setOnAir, clearOnAir } = useOnAir()
     const { editMode } = useEditMode()
 
-    const items = getBlockItems(sectionId, entityType) as BlockItem[]
-
-    if (!items || items.length === 0) {
-        return (
-            <div className="bg-white rounded border">
-                <div className="px-3 py-2 text-sm font-semibold border-b bg-gray-50 flex items-center justify-between">
-                    <span>{title ?? LABELS[entityType]}</span>
-                    <span className="text-xs text-gray-400">0</span>
-                </div>
-                <div className="p-3">
-                    <EmptyState text="Nu există elemente în această listă." />
-                </div>
-            </div>
-        )
+    const sectionId = activeSectionId ?? activeSection?.id ?? ''
+    if (!sectionId) {
+        return <EmptyState text="Nu există secțiune activă." />
     }
 
-    // 🔢 Numerotare DOAR pentru TITLES (per secțiune, corespunde cu CSV „Nr”)
-    let nr = 0
+    const items = getBlockItems(sectionId, activeEntityType)
+
+    if (!items.length) {
+        return <EmptyState text="Nu există elemente în această secțiune." />
+    }
+
+    let titleNr = 0
+    const showNr = activeEntityType === 'titles'
 
     return (
-        <div className="bg-white rounded border overflow-hidden">
+        <div className="h-full min-h-0 overflow-y-auto">
+            <div className="bg-white rounded border">
+                {items.map((item: any) => {
+                    const selected = isSelected(
+                        sectionId,
+                        item.entityType as EntityType,
+                        item.id
+                    )
 
+                    const active = isOnAir(item.entityType, item.id)
 
-            <div className="max-h-[320px] overflow-y-auto">
-                {items.map((item) => {
-                    const active = isOnAir(entityType, item.id)
-                    const selected = isSelected(sectionId, entityType, item.id)
+                    const isTitle = item.entityType === 'titles'
+                    const isPersons = item.entityType === 'persons'
 
-                    if (entityType === 'titles') nr += 1
+                    const displayNr = isTitle ? ++titleNr : null
+
+                    const mainText =
+                        isPersons
+                            ? item.data?.name ?? ''
+                            : item.data?.title ?? item.data?.location ?? ''
+
+                    const subText =
+                        isPersons ? item.data?.occupation ?? '' : ''
 
                     return (
                         <div
                             key={item.id}
-                            onClick={() => select(sectionId, entityType, item.id)}
-                            className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-3 border-l-4
-                                ${selected ? 'bg-blue-100' : 'hover:bg-gray-100'}
-                                ${active ? 'border-red-600 bg-red-50' : 'border-transparent'}`}
+                            onClick={() =>
+                                select(sectionId, item.entityType, item.id)
+                            }
+                            className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-3 border-b border-l-4
+                                ${
+                                selected
+                                    ? 'bg-blue-100 border-l-blue-600'
+                                    : 'hover:bg-gray-100 border-l-transparent'
+                            }
+                                ${
+                                active
+                                    ? 'border-l-red-600 bg-red-50'
+                                    : ''
+                            }
+                            `}
                         >
-                            <div className="flex gap-2 overflow-hidden items-start">
+                            <div className="flex gap-2 overflow-hidden min-w-0">
                                 {editMode && (
                                     <button
                                         title="Șterge"
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            deleteEntity(sectionId, entityType, item.id)
+                                            deleteEntity(
+                                                sectionId,
+                                                item.entityType,
+                                                item.id
+                                            )
                                         }}
-                                        className="text-xs text-white bg-red-500 hover:bg-red-700 px-2 py-0.5 rounded"
+                                        className="text-xs text-white bg-red-500 hover:bg-red-800 border px-2 rounded border-red-700"
                                     >
                                         ✕
                                     </button>
                                 )}
 
-                                <div className="min-w-0">
-                                    {entityType === 'persons' ? (
-                                        <>
-                                            <div className="font-bold truncate">
-                                                {(item.data as Person).name}
-                                            </div>
-                                            <div className="text-xs text-gray-600 truncate">
-                                                {(item.data as Person).occupation}
-                                            </div>
-                                        </>
-                                    ) : entityType === 'locations' || entityType === 'waitLocations' ? (
-                                        <div className="font-bold truncate">
-                                            {(item.data as Location).location}
-                                        </div>
-                                    ) : (
-                                        <div className="font-bold truncate flex gap-2">
-                                            {entityType === 'titles' && (
-                                                <span className="shrink-0 text-gray-600">
-                                                    {nr}.
-                                                </span>
-                                            )}
-                                            <span className="truncate">
-                                                {(item.data as SimpleTitle).title}
+                                <div className="min-w-0 overflow-hidden">
+                                    {showNr && displayNr !== null ? (
+                                        <div className="flex gap-2 min-w-0">
+                                            <span className="shrink-0 font-semibold text-gray-500">
+                                                {displayNr}.
+                                            </span>
+                                            <span className="truncate font-bold">
+                                                {mainText}
                                             </span>
                                         </div>
+                                    ) : isPersons ? (
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="truncate font-bold">
+                                                {mainText}
+                                            </span>
+                                            <span className="truncate text-sm text-gray-600">
+                                                {subText}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <span className="truncate font-bold">
+                                            {mainText}
+                                        </span>
                                     )}
                                 </div>
                             </div>
 
-                            {/* ON AIR (max 1 per EntityType) */}
+                            {/* -------- ON AIR CONTROL -------- */}
                             <div className="flex items-center gap-2 shrink-0">
                                 {active ? (
                                     <>
@@ -124,9 +131,11 @@ export function EntityList({ sectionId, entityType, title }: EntityListProps) {
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation()
-                                                clearOnAir(entityType)
+                                                clearOnAir(
+                                                    item.entityType
+                                                )
                                             }}
-                                            className="text-xs px-2 py-1 rounded border border-gray-400 bg-gray-100 hover:bg-gray-200"
+                                            className="text-xs px-2 py-1 rounded border border-gray-500 bg-gray-200 hover:bg-gray-300"
                                         >
                                             STOP
                                         </button>
@@ -135,9 +144,12 @@ export function EntityList({ sectionId, entityType, title }: EntityListProps) {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            setOnAir(entityType, item.id)
+                                            setOnAir(
+                                                item.entityType,
+                                                item.id
+                                            )
                                         }}
-                                        className="text-xs px-2 py-1 rounded border border-red-500 text-red-500 hover:bg-red-600 hover:text-white"
+                                        className="text-xs px-2 py-1 rounded border text-red-500 border-red-500 hover:text-white hover:bg-red-700"
                                     >
                                         ON AIR
                                     </button>

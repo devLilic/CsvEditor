@@ -23,7 +23,7 @@ export function EditorHeader() {
                 <ConfirmDialog
                     title="Ștergi tot conținutul?"
                     description="Această acțiune nu poate fi anulată."
-                    onConfirm={() => clearAll(createEmptyEntitiesState(activeSectionId || 'invited'))}
+                    onConfirm={() => clearAll()}
                 >
                     <button className="bg-red-600 text-white px-4 py-1 rounded">Clear All</button>
                 </ConfirmDialog>

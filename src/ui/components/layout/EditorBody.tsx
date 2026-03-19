@@ -1,29 +1,25 @@
 // src/ui/components/layout/EditorBody.tsx
+import { EntityList } from '../EntityList'
 import { EntityEditor } from '../EntityEditor'
-import { EditorActionsBar } from '@/ui/components/EditorActionsBar'
-import { SectionPanelBeta } from '@/ui/components/SectionPanelBeta'
-import { SectionPanelInvited } from '@/ui/components/SectionPanelInvited'
-import { useEntities } from '@/features/csv-editor'
+import { EntityTypeTabsLeft } from '../EntityTypeTabsLeft'
 
 export function EditorBody() {
-    const { activeSection } = useEntities()
-
     return (
-        <div className="flex-1 grid grid-cols-[720px_1fr] gap-4 p-4">
+        <div className="flex-1 grid grid-cols-[700px_1fr] gap-4 p-4 min-h-0">
             {/* LEFT */}
-            <div className="min-h-0">
-                {activeSection?.kind === 'invited' ? <SectionPanelInvited /> : <SectionPanelBeta />}
+            <div className="bg-white rounded border p-3 flex flex-col min-h-0">
+                <div className="pb-3 border-b">
+                    <EntityTypeTabsLeft />
+                </div>
+
+                {/* IMPORTANT: min-h-0 + flex-1 ca să permită scroll intern */}
+                <div className="pt-3 flex-1 min-h-0">
+                    <EntityList />
+                </div>
             </div>
 
             {/* RIGHT */}
-            <div className="min-h-0 flex flex-col gap-3">
-                {activeSection?.kind !== 'invited' ? <div className="bg-white rounded border p-2">
-                    <EditorActionsBar />
-                </div> : <div className="bg-white rounded border p-2 h-12">
-
-                </div>}
-
-
+            <div className="min-h-0">
                 <EntityEditor />
             </div>
         </div>

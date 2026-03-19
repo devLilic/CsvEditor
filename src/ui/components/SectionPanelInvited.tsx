@@ -20,9 +20,7 @@ export function SectionPanelInvited() {
                 
                 <div className="p-2">
                     <EntityList
-                        sectionId={activeSectionId}
-                        entityType={activeEntityType}
-                        showTitleNumbering={activeEntityType === 'titles'}
+
                     />
                 </div>
             </div>

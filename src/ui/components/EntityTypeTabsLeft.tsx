@@ -1,12 +1,8 @@
-// src/ui/components/EntityTypeTabs.tsx
-import type { EntityType, CsvSection } from '@/features/csv-editor'
-import { useActiveEntityType, useSelectedEntity } from '@/features/csv-editor'
+// src/ui/components/EntityTypeTabsLeft.tsx
+import type { EntityType } from '@/features/csv-editor'
+import { useActiveEntityType, useSelectedEntity, useEntities } from '@/features/csv-editor'
 
-type Props = {
-    section: CsvSection | null
-}
-
-const INVITED_TYPES: { type: EntityType; label: string }[] = [
+const INVITED_TABS: { type: EntityType; label: string }[] = [
     { type: 'titles', label: 'Titluri' },
     { type: 'persons', label: 'Persoane' },
     { type: 'locations', label: 'Locații' },
@@ -15,17 +11,17 @@ const INVITED_TYPES: { type: EntityType; label: string }[] = [
     { type: 'waitLocations', label: 'Locații așteptare' },
 ]
 
-const BETA_TYPES: { type: EntityType; label: string }[] = [
+const BETA_TABS: { type: EntityType; label: string }[] = [
     { type: 'titles', label: 'Titluri' },
     { type: 'persons', label: 'Persoane' },
 ]
 
-export function EntityTypeTabs({ section }: Props) {
+export function EntityTypeTabsLeft() {
+    const { activeSection } = useEntities()
     const { activeEntityType, setActiveEntityType } = useActiveEntityType()
     const { clearSelection } = useSelectedEntity()
 
-    const isInvited = section?.kind === 'invited'
-    const tabs = isInvited ? INVITED_TYPES : BETA_TYPES
+    const tabs = activeSection?.kind === 'beta' ? BETA_TABS : INVITED_TABS
 
     const handleChange = (type: EntityType) => {
         if (type === activeEntityType) return
@@ -34,7 +30,7 @@ export function EntityTypeTabs({ section }: Props) {
     }
 
     return (
-        <div className="flex flex-wrap gap-2 px-3 py-2 border-b bg-white">
+        <div className="flex gap-2 flex-wrap">
             {tabs.map((t) => (
                 <button
                     key={t.type}

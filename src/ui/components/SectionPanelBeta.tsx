@@ -11,14 +11,14 @@ export function SectionPanelBeta() {
             <div className="bg-white rounded border">
                 <div className="px-3 py-2 text-sm font-semibold border-b bg-gray-50">Titluri</div>
                 <div className="p-2">
-                    <EntityList sectionId={activeSectionId} entityType="titles" showTitleNumbering />
+                    <EntityList  />
                 </div>
             </div>
 
             <div className="bg-white rounded border">
                 <div className="px-3 py-2 text-sm font-semibold border-b bg-gray-50">Persoane</div>
                 <div className="p-2">
-                    <EntityList sectionId={activeSectionId} entityType="persons" />
+                    <EntityList  />
                 </div>
             </div>
         </div>
