@@ -43,6 +43,18 @@ if (!app.requestSingleInstanceLock()) {
 let win: BrowserWindow | null = null
 const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
+const SPELLCHECK_LANGUAGES = ['ro']
+
+function configureSpellChecker(window: BrowserWindow) {
+  const { session } = window.webContents
+  const languages = SPELLCHECK_LANGUAGES.filter((language) =>
+    session.availableSpellCheckerLanguages.includes(language),
+  )
+
+  if (languages.length > 0) {
+    session.setSpellCheckerLanguages(languages)
+  }
+}
 
 async function createWindow() {
   win = new BrowserWindow({
@@ -50,6 +62,7 @@ async function createWindow() {
     height: 900,
     title: 'devTitles',
     fullscreenable: true,
+    autoHideMenuBar: true,
     icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
     webPreferences: {
       preload,
@@ -59,8 +72,13 @@ async function createWindow() {
       // Consider using contextBridge.exposeInMainWorld
       // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
       contextIsolation: true,
+      spellcheck: true,
     },
   })
+
+  configureSpellChecker(win)
+  win.removeMenu()
+  win.setMenuBarVisibility(false)
 
   win.once('ready-to-show', () => {
     win?.maximize()
@@ -96,7 +114,6 @@ async function createWindow() {
   update(win)
 }
 
-// app.whenReady().then(createWindow)
 app.whenReady().then(createWindow)
 
 app.on('window-all-closed', () => {
@@ -125,12 +142,18 @@ app.on('activate', () => {
 // New window example arg: new windows url
 ipcMain.handle('open-win', (_, arg) => {
   const childWindow = new BrowserWindow({
+    autoHideMenuBar: true,
     webPreferences: {
       preload,
       nodeIntegration: true,
       contextIsolation: false,
+      spellcheck: true,
     },
   })
+
+  configureSpellChecker(childWindow)
+  childWindow.removeMenu()
+  childWindow.setMenuBarVisibility(false)
 
   if (VITE_DEV_SERVER_URL) {
     childWindow.loadURL(`${VITE_DEV_SERVER_URL}#${arg}`)

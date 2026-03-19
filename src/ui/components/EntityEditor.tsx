@@ -264,7 +264,6 @@ export function EntityEditor() {
                     <InputField
                         label="Titlu"
                         value={form.title ?? ''}
-                        uppercase
                         inputRef={titleRef}
                         onChange={(v) => updateField('title', v)}
                         onEnter={saveEntity}

@@ -11,6 +11,31 @@ function isBeta(section: CsvSection) {
     return section.kind === 'beta'
 }
 
+function EditIcon() {
+    return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" />
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"
+            />
+        </svg>
+    )
+}
+
+function DeleteIcon() {
+    return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 6V4h8v2" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 6l-1 14H6L5 6" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
+        </svg>
+    )
+}
+
 export function SectionsTabs() {
     const {
         sections,
@@ -24,17 +49,9 @@ export function SectionsTabs() {
     const { clearSelection } = useSelectedEntity()
     const { setActiveEntityType } = useActiveEntityType()
 
-    // ---- Add dialog ----
     const [addOpen, setAddOpen] = useState(false)
-
-    // ---- Rename dialog ----
     const [renameOpen, setRenameOpen] = useState(false)
     const [renameSectionId, setRenameSectionId] = useState<string | null>(null)
-
-    const activeSection = useMemo(
-        () => sections.find((s) => s.id === activeSectionId) ?? null,
-        [sections, activeSectionId]
-    )
 
     const handleSwitchSection = (sectionId: string) => {
         if (sectionId === activeSectionId) return
@@ -44,6 +61,12 @@ export function SectionsTabs() {
         setActiveSection(sectionId)
     }
 
+    const handleDeleteBeta = (sectionId: string) => {
+        clearSelection()
+        deleteBetaSection(sectionId)
+        setActiveEntityType(DEFAULT_ENTITY)
+    }
+
     const openRename = (sectionId: string) => {
         setRenameSectionId(sectionId)
         setRenameOpen(true)
@@ -51,9 +74,9 @@ export function SectionsTabs() {
 
     const renameInitialValue = useMemo(() => {
         if (!renameSectionId) return ''
-        const s = sections.find((x) => x.id === renameSectionId)
-        if (!s || !isBeta(s)) return ''
-        return s.betaTitle ?? ''
+        const section = sections.find((item) => item.id === renameSectionId)
+        if (!section || !isBeta(section)) return ''
+        return section.betaTitle ?? ''
     }, [renameSectionId, sections])
 
     return (
@@ -62,7 +85,6 @@ export function SectionsTabs() {
                 const isActive = section.id === activeSectionId
 
                 if (section.kind === 'beta') {
-                    // ✅ canonical: partea numerică vine din betaIndex, partea editabilă = betaTitle
                     const label = `${section.betaTitle ?? 'Titlu'}`
 
                     return (
@@ -80,47 +102,39 @@ export function SectionsTabs() {
                                 {label}
                             </button>
 
-                            {/* Rename */}
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     openRename(section.id)
                                 }}
-                                className={`ml-1 text-xs px-2 py-0.5 rounded border ${
+                                className={`ml-1 inline-flex items-center justify-center rounded border px-2 py-1 ${
                                     isActive ? 'border-white/50 hover:bg-white/10' : 'border-gray-200 hover:bg-gray-100'
                                 }`}
                                 title="Rename"
+                                aria-label={`Editează secțiunea ${label}`}
                             >
-                                ✎
+                                <EditIcon />
                             </button>
 
-                            {/* Delete (confirm) */}
                             <ConfirmDialog
                                 title="Ștergi secțiunea BETA?"
                                 description="Conținutul din această secțiune va fi șters. INVITAȚI rămâne mereu."
-                                onConfirm={() => {
-                                    clearSelection()
-                                    // dacă ștergi secțiunea activă, logic va reindexa; UI doar cere delete
-                                    deleteBetaSection(section.id)
-                                    // fallback: dacă ștergeai activul, setează default după ce logic actualizează
-                                    setActiveEntityType(DEFAULT_ENTITY)
-                                }}
+                                onConfirm={() => handleDeleteBeta(section.id)}
                             >
                                 <button
-                                    onClick={(e) => e.stopPropagation()}
-                                    className={`text-xs px-2 py-0.5 rounded border ${
+                                    className={`inline-flex items-center justify-center rounded border px-2 py-1 ${
                                         isActive ? 'border-white/50 hover:bg-white/10' : 'border-gray-200 hover:bg-gray-100'
                                     }`}
                                     title="Delete"
+                                    aria-label={`Șterge secțiunea ${label}`}
                                 >
-                                    🗑
+                                    <DeleteIcon />
                                 </button>
                             </ConfirmDialog>
                         </div>
                     )
                 }
 
-                // invited
                 return (
                     <button
                         key={section.id}
@@ -134,7 +148,6 @@ export function SectionsTabs() {
                 )
             })}
 
-            {/* Add BETA (max 5 control e în logic; UI doar cere) */}
             <button
                 onClick={() => setAddOpen(true)}
                 className="px-3 py-1 rounded text-sm border bg-white border border-green-300 hover:bg-green-500 hover:text-white"
@@ -143,7 +156,6 @@ export function SectionsTabs() {
                 ADAUGĂ BETA
             </button>
 
-            {/* ADD DIALOG */}
             <TextPromptDialog
                 open={addOpen}
                 title="Creează secțiune BETA"
@@ -152,14 +164,12 @@ export function SectionsTabs() {
                 initialValue=""
                 confirmText="Creează"
                 onClose={() => setAddOpen(false)}
-                onConfirm={(v) => {
-                    const betaTitle = (v ?? '').trim() || ''
-                    // ✅ NU trimite “BETA 1” etc. – doar titlul editabil
+                onConfirm={(value) => {
+                    const betaTitle = (value ?? '').trim() || ''
                     addBetaSection(betaTitle)
                 }}
             />
 
-            {/* RENAME DIALOG */}
             <TextPromptDialog
                 open={renameOpen}
                 title="Redenumește titlul BETA"
@@ -171,9 +181,9 @@ export function SectionsTabs() {
                     setRenameOpen(false)
                     setRenameSectionId(null)
                 }}
-                onConfirm={(v) => {
+                onConfirm={(value) => {
                     if (!renameSectionId) return
-                    const nextTitle = (v ?? '').trim() || 'Titlu'
+                    const nextTitle = (value ?? '').trim() || 'Titlu'
                     renameBetaSection(renameSectionId, nextTitle)
                 }}
             />

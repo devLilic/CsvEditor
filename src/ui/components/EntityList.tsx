@@ -1,13 +1,15 @@
 // src/ui/components/EntityList.tsx
+import { useMemo } from 'react'
 import {
     useEntities,
     useSelectedEntity,
     useActiveEntityType,
     useOnAir,
 } from '@/features/csv-editor'
+import type { EntityType } from '@/features/csv-editor'
 import { EmptyState } from './common/EmptyState'
 import { useEditMode } from '@/ui/context/EditModeContext'
-import type { EntityType } from '@/features/csv-editor'
+import { useTitleFilter } from '@/ui/context/TitleFilterContext'
 
 export function EntityList() {
     const { activeSectionId, activeSection, getBlockItems, deleteEntity } =
@@ -17,25 +19,49 @@ export function EntityList() {
     const { select, isSelected } = useSelectedEntity()
     const { isOnAir, setOnAir, clearOnAir } = useOnAir()
     const { editMode } = useEditMode()
+    const { titleFilter } = useTitleFilter()
 
     const sectionId = activeSectionId ?? activeSection?.id ?? ''
+    const normalizedTitleFilter = titleFilter.trim().toLocaleLowerCase()
+    const items = useMemo(() => {
+        if (!sectionId) {
+            return []
+        }
+
+        return getBlockItems(sectionId, activeEntityType)
+    }, [activeEntityType, getBlockItems, sectionId])
+    const filteredItems = useMemo(() => {
+        if (activeEntityType !== 'titles' || !normalizedTitleFilter) {
+            return items
+        }
+
+        return items.filter((item: any) =>
+            (item.data?.title ?? '')
+                .toLocaleLowerCase()
+                .includes(normalizedTitleFilter)
+        )
+    }, [activeEntityType, items, normalizedTitleFilter])
+
     if (!sectionId) {
-        return <EmptyState text="Nu există secțiune activă." />
+        return <EmptyState text="Nu exista sectiune activa." />
     }
 
-    const items = getBlockItems(sectionId, activeEntityType)
+    if (!filteredItems.length) {
+        if (activeEntityType === 'titles' && normalizedTitleFilter) {
+            return (
+                <EmptyState text="Nu exista titluri care contin sintagma cautata." />
+            )
+        }
 
-    if (!items.length) {
-        return <EmptyState text="Nu există elemente în această secțiune." />
+        return <EmptyState text="Nu exista elemente in aceasta sectiune." />
     }
 
-    let titleNr = 0
     const showNr = activeEntityType === 'titles'
 
     return (
         <div className="h-full min-h-0 overflow-y-auto">
-            <div className="bg-white rounded border">
-                {items.map((item: any) => {
+            <div className="rounded border bg-white">
+                {filteredItems.map((item: any) => {
                     const selected = isSelected(
                         sectionId,
                         item.entityType as EntityType,
@@ -47,15 +73,15 @@ export function EntityList() {
                     const isTitle = item.entityType === 'titles'
                     const isPersons = item.entityType === 'persons'
 
-                    const displayNr = isTitle ? ++titleNr : null
+                    const displayNr = isTitle
+                        ? items.findIndex((listItem: any) => listItem.id === item.id) + 1
+                        : null
 
-                    const mainText =
-                        isPersons
-                            ? item.data?.name ?? ''
-                            : item.data?.title ?? item.data?.location ?? ''
+                    const mainText = isPersons
+                        ? item.data?.name ?? ''
+                        : item.data?.title ?? item.data?.location ?? ''
 
-                    const subText =
-                        isPersons ? item.data?.occupation ?? '' : ''
+                    const subText = isPersons ? item.data?.occupation ?? '' : ''
 
                     return (
                         <div
@@ -65,21 +91,19 @@ export function EntityList() {
                             }
                             className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-3 border-b border-l-4
                                 ${
-                                selected
-                                    ? 'bg-blue-100 border-l-blue-600'
-                                    : 'hover:bg-gray-100 border-l-transparent'
-                            }
+                                    selected
+                                        ? 'bg-blue-100 border-l-blue-600'
+                                        : 'hover:bg-gray-100 border-l-transparent'
+                                }
                                 ${
-                                active
-                                    ? 'border-l-red-600 bg-red-50'
-                                    : ''
-                            }
+                                    active ? 'border-l-red-600 bg-red-50' : ''
+                                }
                             `}
                         >
-                            <div className="flex gap-2 overflow-hidden min-w-0">
+                            <div className="flex min-w-0 gap-2 overflow-hidden">
                                 {editMode && (
                                     <button
-                                        title="Șterge"
+                                        title="Sterge"
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             deleteEntity(
@@ -88,15 +112,15 @@ export function EntityList() {
                                                 item.id
                                             )
                                         }}
-                                        className="text-xs text-white bg-red-500 hover:bg-red-800 border px-2 rounded border-red-700"
+                                        className="border border-red-700 bg-red-500 px-2 text-xs text-white rounded hover:bg-red-800"
                                     >
-                                        ✕
+                                        ×
                                     </button>
                                 )}
 
                                 <div className="min-w-0 overflow-hidden">
                                     {showNr && displayNr !== null ? (
-                                        <div className="flex gap-2 min-w-0">
+                                        <div className="flex min-w-0 gap-2">
                                             <span className="shrink-0 font-semibold text-gray-500">
                                                 {displayNr}.
                                             </span>
@@ -105,7 +129,7 @@ export function EntityList() {
                                             </span>
                                         </div>
                                     ) : isPersons ? (
-                                        <div className="flex flex-col min-w-0">
+                                        <div className="flex min-w-0 flex-col">
                                             <span className="truncate font-bold">
                                                 {mainText}
                                             </span>
@@ -121,21 +145,18 @@ export function EntityList() {
                                 </div>
                             </div>
 
-                            {/* -------- ON AIR CONTROL -------- */}
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex shrink-0 items-center gap-2">
                                 {active ? (
                                     <>
                                         <span className="text-xs font-semibold text-red-600">
-                                            ● ON AIR
+                                            ON AIR
                                         </span>
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation()
-                                                clearOnAir(
-                                                    item.entityType
-                                                )
+                                                clearOnAir(item.entityType)
                                             }}
-                                            className="text-xs px-2 py-1 rounded border border-gray-500 bg-gray-200 hover:bg-gray-300"
+                                            className="rounded border border-gray-500 bg-gray-200 px-2 py-1 text-xs hover:bg-gray-300"
                                         >
                                             STOP
                                         </button>
@@ -144,12 +165,9 @@ export function EntityList() {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            setOnAir(
-                                                item.entityType,
-                                                item.id
-                                            )
+                                            setOnAir(item.entityType, item.id)
                                         }}
-                                        className="text-xs px-2 py-1 rounded border text-red-500 border-red-500 hover:text-white hover:bg-red-700"
+                                        className="rounded border border-red-500 px-2 py-1 text-xs text-red-500 hover:bg-red-700 hover:text-white"
                                     >
                                         ON AIR
                                     </button>

@@ -37,12 +37,13 @@ export function InputField({
             <input
                 ref={inputRef}
                 value={value}
+                spellCheck={true}
                 placeholder={placeholder}
                 onChange={(e) => onChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 className={`
+                ${uppercase ? 'uppercase' : ''}
           border px-3 py-2 rounded text-2xl focus:outline-none focus:ring-2
-          ${uppercase ? 'uppercase' : ''}
           ${invalid
                     ? 'border-red-500 focus:ring-red-400 animate-shake'
                     : 'border-gray-300 focus:ring-blue-500'}

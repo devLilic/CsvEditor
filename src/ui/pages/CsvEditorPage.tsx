@@ -8,6 +8,7 @@ import {EditorLayout} from '../components/layout/EditorLayout'
 import {EditorHeader} from '../components/layout/EditorHeader'
 import {EditorBody} from '../components/layout/EditorBody'
 import {EditModeProvider} from "@/ui/context/EditModeContext";
+import { TitleFilterProvider } from '@/ui/context/TitleFilterContext'
 
 export function CsvEditorPage() {
     useCsvInitialization()
@@ -15,10 +16,12 @@ export function CsvEditorPage() {
 
     return (
         <EditModeProvider>
-            <EditorLayout>
-                <EditorHeader/>
-                <EditorBody/>
-            </EditorLayout>
+            <TitleFilterProvider>
+                <EditorLayout>
+                    <EditorHeader/>
+                    <EditorBody/>
+                </EditorLayout>
+            </TitleFilterProvider>
         </EditModeProvider>
     )
 }
