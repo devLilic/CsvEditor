@@ -27,7 +27,13 @@ function cell(row: CsvRowRaw, key: string): string {
 function isCompletelyEmptyRow(row: CsvRowRaw): boolean {
     const values = Object.values(row ?? {})
     if (values.length === 0) return true
-    return values.every((v) => (v ?? '').trim() === '')
+    return values.every((v) => {
+        if (Array.isArray(v)) {
+            return v.every((item) => String(item ?? '').trim() === '')
+        }
+
+        return String(v ?? '').trim() === ''
+    })
 }
 
 function buildRowFromCsv(row: CsvRowRaw, allowWait: boolean): Omit<SectionRow, 'id'> | null {
@@ -156,7 +162,7 @@ export function parseCsv(content: string): EntitiesState {
         }
 
         // content row
-        const allowWait = current?.kind === 'invited'
+        const allowWait = current?.kind === 'invited' || (!current && !sawAnyMarker)
         const rowData = buildRowFromCsv(row, Boolean(allowWait))
         if (!rowData) return
 

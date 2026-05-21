@@ -3,20 +3,20 @@ import type { GraphicsProps } from './types'
 
 // ⚙️ CONFIGURAȚIE LOCALĂ
 const CONFIG = {
-    leftPct: 5,
-    bottomPct: 11.8,
-    widthPct: 73.5,
-    color: '#1e3a8a',
-    fontSizePx: 32,
-    trackingEm: -0.006,
+    leftPct: 31,
+    bottomPct: 11.4,
+    widthPct: 64,
+    color: '#000',
+    fontSizePx: 36,
+    trackingEm: -0.08,
     fontWeight: 'bold',
-    lineHeight: 1, // ✅ Adăugat
+    lineHeight: 1.1, // ✅ Adăugat
 }
 
 export const TitleGraphics = ({ content, containerRef, textRef, scaleX, isLayoutReady }: GraphicsProps) => (
     <div
         ref={containerRef}
-        className="absolute overflow-hidden whitespace-nowrap"
+        className="absolute overflow-hidden whitespace-nowrap border border-1"
         style={{
             left: `${CONFIG.leftPct}%`,
             bottom: `${CONFIG.bottomPct}%`,

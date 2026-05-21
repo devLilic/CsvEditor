@@ -1,0 +1,80 @@
+import type { BroadcastTemplate } from '@/shared/preview/templateContract'
+
+export const titleTemplate: BroadcastTemplate = {
+    id: 'title',
+    name: 'Title Lower Third',
+    canvas: {
+        width: 1920,
+        height: 1080,
+        background: {
+            type: 'color',
+            value: '#101214',
+        },
+    },
+    layers: [
+        {
+            id: 'title-accent-line',
+            type: 'shape',
+            shapeType: 'rect',
+            x: 108,
+            y: 804,
+            width: 84,
+            height: 18,
+            zIndex: 1,
+            fill: {
+                type: 'solid',
+                value: '#d71920',
+            },
+        },
+        {
+            id: 'title-lower-third-panel',
+            type: 'shape',
+            shapeType: 'rect',
+            x: 108,
+            y: 822,
+            width: 1260,
+            height: 136,
+            zIndex: 2,
+            fill: {
+                type: 'solid',
+                value: '#f5f5f2',
+            },
+        },
+        {
+            id: 'title-side-block',
+            type: 'shape',
+            shapeType: 'rect',
+            x: 108,
+            y: 822,
+            width: 84,
+            height: 136,
+            zIndex: 3,
+            fill: {
+                type: 'solid',
+                value: '#d71920',
+            },
+        },
+        {
+            id: 'title-main-text',
+            type: 'text',
+            x: 226,
+            y: 850,
+            width: 1086,
+            height: 82,
+            zIndex: 4,
+            fieldId: 'title',
+            fallbackText: 'TITLU',
+            fitInBox: true,
+            fitMode: 'scaleX',
+            minScaleX: 0.62,
+            textStyle: {
+                fontFamily: 'Inter',
+                fontSize: 58,
+                fontWeight: 800,
+                color: '#111111',
+                align: 'left',
+                transform: 'uppercase',
+            },
+        },
+    ],
+}

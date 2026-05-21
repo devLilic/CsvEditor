@@ -62,7 +62,7 @@ export function Preview16x9({ content, entityType, measureText }: PreviewProps) 
                 bg-black
                 bg-center bg-no-repeat bg-contain
             "
-            style={{ backgroundImage: "url('./news.png')" }}
+            style={{ backgroundImage: "url('./background.png')" }}
         >
             {/* Tag-ul de debug pentru a vedea ce preview e activ */}
             <span className="absolute top-2 left-2 text-xs text-white/70 z-10 bg-black/50 px-1 rounded">

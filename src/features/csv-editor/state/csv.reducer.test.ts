@@ -1,509 +1,179 @@
-// src/features/csv-editor/state/csv.reducer.test.ts
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { csvReducer } from './csv.reducer'
-import {initialCsvState} from './csv.types'
+import { initialCsvState } from './csv.types'
 import type { CsvState } from './csv.types'
+import type { CsvSection } from '../domain/entities'
 
-describe('csvReducer — CSV_LOADED', () => {
-    it('CSV_LOADED sets isLoaded = true', () => {
-        const action = {
+function stateWithSections(sections: CsvSection[], activeSectionId = sections[0]?.id ?? null): CsvState {
+    return {
+        ...initialCsvState,
+        entities: { sections },
+        isLoaded: true,
+        activeSectionId,
+    }
+}
+
+function invitedSection(overrides: Partial<CsvSection> = {}): CsvSection {
+    return {
+        id: 'invited-1',
+        kind: 'invited',
+        rows: [],
+        ...overrides,
+    }
+}
+
+function betaSection(overrides: Partial<CsvSection> = {}): CsvSection {
+    return {
+        id: 'beta-1',
+        kind: 'beta',
+        betaIndex: 1,
+        betaTitle: 'Beta',
+        rows: [],
+        ...overrides,
+    }
+}
+
+describe('csvReducer - CSV_LOADED', () => {
+    it('sets isLoaded=true', () => {
+        const nextState = csvReducer(initialCsvState, {
             type: 'CSV_LOADED',
-            payload: initialCsvState.entities,
-        } as const
-
-        const nextState: CsvState = csvReducer(initialCsvState, action)
-
-        expect(nextState.isLoaded).toBe(true)
-    })
-})
-
-describe('csvReducer — CSV_LOADED', () => {
-    it('CSV_LOADED sets isLoaded = true', () => {
-        const action = {
-            type: 'CSV_LOADED',
-            payload: initialCsvState.entities,
-        } as const
-
-        const nextState: CsvState = csvReducer(initialCsvState, action)
-
-        expect(nextState.isLoaded).toBe(true)
-    })
-
-    it('CSV_LOADED does NOT modify selected', () => {
-        const stateWithSelection: CsvState = {
-            ...initialCsvState,
-            selected: {
-                type: 'titles',
-                id: 'selected-id',
-            },
-        }
-
-        const action = {
-            type: 'CSV_LOADED',
-            payload: initialCsvState.entities,
-        } as const
-
-        const nextState = csvReducer(stateWithSelection, action)
-
-        expect(nextState.selected).toEqual(stateWithSelection.selected)
-    })
-})
-
-describe('csvReducer — CSV_LOADED', () => {
-    it('CSV_LOADED sets isLoaded = true', () => {
-        const action = {
-            type: 'CSV_LOADED',
-            payload: initialCsvState.entities,
-        } as const
-
-        const nextState: CsvState = csvReducer(initialCsvState, action)
+            payload: { sections: [] },
+        })
 
         expect(nextState.isLoaded).toBe(true)
     })
 
-    it('CSV_LOADED does NOT modify selected', () => {
-        const stateWithSelection: CsvState = {
-            ...initialCsvState,
-            selected: {
-                type: 'titles',
-                id: 'selected-id',
-            },
-        }
-
-        const action = {
+    it('ensures an invited section exists', () => {
+        const nextState = csvReducer(initialCsvState, {
             type: 'CSV_LOADED',
-            payload: initialCsvState.entities,
-        } as const
+            payload: { sections: [betaSection()] },
+        })
 
-        const nextState = csvReducer(stateWithSelection, action)
-
-        expect(nextState.selected).toEqual(stateWithSelection.selected)
-    })
-
-    it('CSV_LOADED does NOT modify onAir', () => {
-        const stateWithOnAir: CsvState = {
-            ...initialCsvState,
-            onAir: {
-                titles: 'on-air-id',
-                persons: 'person-on-air',
-            },
-        }
-
-        const action = {
-            type: 'CSV_LOADED',
-            payload: initialCsvState.entities,
-        } as const
-
-        const nextState = csvReducer(stateWithOnAir, action)
-
-        expect(nextState.onAir).toEqual(stateWithOnAir.onAir)
+        expect(nextState.entities.sections.some((section) => section.kind === 'invited')).toBe(true)
+        expect(nextState.entities.sections.at(-1)?.kind).toBe('invited')
     })
 })
 
-describe('csvReducer — CSV_LOADED', () => {
-    it('CSV_LOADED sets isLoaded = true', () => {
-        const action = {
-            type: 'CSV_LOADED',
-            payload: initialCsvState.entities,
-        } as const
+describe('csvReducer - sections', () => {
+    it('SECTION_ADD_BETA adds a beta section and keeps invited last', () => {
+        const state = stateWithSections([invitedSection()], 'invited-1')
 
-        const nextState: CsvState = csvReducer(initialCsvState, action)
+        const nextState = csvReducer(state, {
+            type: 'SECTION_ADD_BETA',
+            payload: { betaTitle: 'Politic' },
+        })
 
-        expect(nextState.isLoaded).toBe(true)
+        expect(nextState.entities.sections.map((section) => section.kind)).toEqual(['beta', 'invited'])
+        expect(nextState.entities.sections[0].betaTitle).toBe('Politic')
+        expect(nextState.entities.sections[0].betaIndex).toBe(1)
+        expect(nextState.entities.sections.at(-1)?.id).toBe('invited-1')
+        expect(nextState.activeSectionId).toBe(nextState.entities.sections[0].id)
     })
 
-    it('CSV_LOADED does NOT modify selected', () => {
-        const stateWithSelection: CsvState = {
-            ...initialCsvState,
-            selected: {
-                type: 'titles',
-                id: 'selected-id',
-            },
-        }
+    it('SECTION_DELETE_BETA does not delete invited section', () => {
+        const beta = betaSection()
+        const invited = invitedSection()
+        const state = stateWithSections([beta, invited], beta.id)
 
-        const action = {
-            type: 'CSV_LOADED',
-            payload: initialCsvState.entities,
-        } as const
+        const nextState = csvReducer(state, {
+            type: 'SECTION_DELETE_BETA',
+            payload: { sectionId: invited.id },
+        })
 
-        const nextState = csvReducer(stateWithSelection, action)
-
-        expect(nextState.selected).toEqual(stateWithSelection.selected)
-    })
-
-    it('CSV_LOADED does NOT modify onAir', () => {
-        const stateWithOnAir: CsvState = {
-            ...initialCsvState,
-            onAir: {
-                titles: 'on-air-id',
-                persons: 'person-on-air',
-            },
-        }
-
-        const action = {
-            type: 'CSV_LOADED',
-            payload: initialCsvState.entities,
-        } as const
-
-        const nextState = csvReducer(stateWithOnAir, action)
-
-        expect(nextState.onAir).toEqual(stateWithOnAir.onAir)
-    })
-
-    it('CSV_LOADED does NOT modify activeEntityType', () => {
-        const stateWithActiveTab: CsvState = {
-            ...initialCsvState,
-            activeEntityType: 'locations',
-        }
-
-        const action = {
-            type: 'CSV_LOADED',
-            payload: initialCsvState.entities,
-        } as const
-
-        const nextState = csvReducer(stateWithActiveTab, action)
-
-        expect(nextState.activeEntityType).toBe('locations')
+        expect(nextState).toBe(state)
+        expect(nextState.entities.sections).toHaveLength(2)
+        expect(nextState.entities.sections.at(-1)?.kind).toBe('invited')
     })
 })
 
-describe('csvReducer — ENTITY_ADD', () => {
-    it('ENTITY_ADD adds entity to correct entityType array', () => {
-        const action = {
+describe('csvReducer - entities', () => {
+    it('ENTITY_ADD adds the entity in the correct section', () => {
+        const beta = betaSection()
+        const invited = invitedSection()
+        const state = stateWithSections([beta, invited], beta.id)
+
+        const nextState = csvReducer(state, {
             type: 'ENTITY_ADD',
             payload: {
+                sectionId: invited.id,
                 entityType: 'titles',
-                data: {
-                    title: 'Breaking News',
-                },
+                data: { title: 'Breaking News' },
             },
-        } as const
+        })
 
-        const nextState: CsvState = csvReducer(initialCsvState, action)
+        const nextBeta = nextState.entities.sections.find((section) => section.id === beta.id)
+        const nextInvited = nextState.entities.sections.find((section) => section.id === invited.id)
 
-        expect(nextState.entities.titles).toHaveLength(1)
-        expect(nextState.entities.titles[0].title).toBe('Breaking News')
+        expect(nextBeta?.rows).toHaveLength(0)
+        expect(nextInvited?.rows).toHaveLength(1)
+        expect(nextInvited?.rows[0].title?.title).toBe('Breaking News')
+        expect(nextState.activeSectionId).toBe(invited.id)
+        expect(nextState.activeEntityType).toBe('titles')
     })
 
-    it('ENTITY_ADD does NOT affect selected', () => {
-        const stateWithSelection: CsvState = {
-            ...initialCsvState,
-            selected: {
-                type: 'titles',
-                id: 'existing-selected-id',
-            },
-        }
-
-        const action = {
-            type: 'ENTITY_ADD',
-            payload: {
-                entityType: 'titles',
-                data: {
-                    title: 'Another Title',
+    it('ENTITY_UPDATE modifies only the target entity', () => {
+        const invited = invitedSection({
+            rows: [
+                {
+                    id: 'row-1',
+                    title: { id: 'title-1', title: 'Old target' },
+                    person: { id: 'person-1', name: 'Person A', occupation: 'Role A' },
                 },
-            },
-        } as const
-
-        const nextState = csvReducer(stateWithSelection, action)
-
-        expect(nextState.selected).toEqual(stateWithSelection.selected)
-    })
-
-    it('ENTITY_ADD does NOT affect onAir', () => {
-        const stateWithOnAir: CsvState = {
-            ...initialCsvState,
-            onAir: {
-                titles: 'on-air-title-id',
-                persons: 'on-air-person-id',
-            },
-        }
-
-        const action = {
-            type: 'ENTITY_ADD',
-            payload: {
-                entityType: 'titles',
-                data: {
-                    title: 'Fresh Title',
+                {
+                    id: 'row-2',
+                    title: { id: 'title-2', title: 'Other title' },
                 },
-            },
-        } as const
+            ],
+        })
+        const state = stateWithSections([invited], invited.id)
 
-        const nextState = csvReducer(stateWithOnAir, action)
-
-        expect(nextState.onAir).toEqual(stateWithOnAir.onAir)
-    })
-})
-
-describe('csvReducer — ENTITY_UPDATE', () => {
-    it('ENTITY_UPDATE updates existing entity fields', () => {
-        const stateWithEntity: CsvState = {
-            ...initialCsvState,
-            entities: {
-                ...initialCsvState.entities,
-                titles: [
-                    {
-                        id: 'title-1',
-                        title: 'Old Title',
-                    },
-                ],
-            },
-        }
-
-        const action = {
+        const nextState = csvReducer(state, {
             type: 'ENTITY_UPDATE',
             payload: {
+                sectionId: invited.id,
                 entityType: 'titles',
                 id: 'title-1',
-                data: {
-                    title: 'Updated Title',
-                },
+                data: { title: 'Updated target' },
             },
-        } as const
-
-        const nextState = csvReducer(stateWithEntity, action)
-
-        expect(nextState.entities.titles).toHaveLength(1)
-        expect(nextState.entities.titles[0].title).toBe('Updated Title')
-    })
-    it('ENTITY_UPDATE preserves entity id', () => {
-        const stateWithEntity: CsvState = {
-            ...initialCsvState,
-            entities: {
-                ...initialCsvState.entities,
-                titles: [
-                    {
-                        id: 'title-42',
-                        title: 'Initial Title',
-                    },
-                ],
-            },
-        }
-
-        const action = {
-            type: 'ENTITY_UPDATE',
-            payload: {
-                entityType: 'titles',
-                id: 'title-42',
-                data: {
-                    title: 'Renamed Title',
-                },
-            },
-        } as const
-
-        const nextState = csvReducer(stateWithEntity, action)
-
-        expect(nextState.entities.titles).toHaveLength(1)
-        expect(nextState.entities.titles[0].id).toBe('title-42')
-    })
-
-    it('ENTITY_UPDATE on missing entity is no-op', () => {
-        const stateWithOtherEntity: CsvState = {
-            ...initialCsvState,
-            entities: {
-                ...initialCsvState.entities,
-                titles: [
-                    {
-                        id: 'existing-id',
-                        title: 'Existing Title',
-                    },
-                ],
-            },
-        }
-
-        const action = {
-            type: 'ENTITY_UPDATE',
-            payload: {
-                entityType: 'titles',
-                id: 'missing-id',
-                data: {
-                    title: 'Should Not Apply',
-                },
-            },
-        } as const
-
-        const nextState = csvReducer(stateWithOtherEntity, action)
-
-        // entity-ul existent rămâne neschimbat
-        expect(nextState.entities.titles).toEqual(
-            stateWithOtherEntity.entities.titles
-        )
-    })
-})
-
-describe('csvReducer — ENTITY_DELETE', () => {
-    it('ENTITY_DELETE removes entity from entities list', () => {
-        const stateWithEntities: CsvState = {
-            ...initialCsvState,
-            entities: {
-                ...initialCsvState.entities,
-                titles: [
-                    { id: 't1', title: 'Title 1' },
-                    { id: 't2', title: 'Title 2' },
-                ],
-            },
-        }
-
-        const action = {
-            type: 'ENTITY_DELETE',
-            payload: {
-                entityType: 'titles',
-                id: 't1',
-            },
-        } as const
-
-        const nextState = csvReducer(stateWithEntities, action)
-
-        expect(nextState.entities.titles).toHaveLength(1)
-        expect(nextState.entities.titles[0].id).toBe('t2')
-    })
-
-    it('ENTITY_DELETE clears selected if deleted entity was selected', () => {
-        const stateWithSelected: CsvState = {
-            ...initialCsvState,
-            entities: {
-                ...initialCsvState.entities,
-                titles: [{ id: 't1', title: 'Title 1' }],
-            },
-            selected: {
-                type: 'titles',
-                id: 't1',
-            },
-        }
-
-        const action = {
-            type: 'ENTITY_DELETE',
-            payload: {
-                entityType: 'titles',
-                id: 't1',
-            },
-        } as const
-
-        const nextState = csvReducer(stateWithSelected, action)
-
-        expect(nextState.selected).toBeNull()
-    })
-
-    it('ENTITY_DELETE clears onAir[type] if deleted entity was ON AIR', () => {
-        const stateWithOnAir: CsvState = {
-            ...initialCsvState,
-            entities: {
-                ...initialCsvState.entities,
-                titles: [{ id: 't1', title: 'Title 1' }],
-            },
-            onAir: {
-                titles: 't1',
-            },
-        }
-
-        const action = {
-            type: 'ENTITY_DELETE',
-            payload: {
-                entityType: 'titles',
-                id: 't1',
-            },
-        } as const
-
-        const nextState = csvReducer(stateWithOnAir, action)
-
-        expect(nextState.onAir).toEqual({})
-    })
-
-    it('ENTITY_DELETE does NOT affect other entity types', () => {
-        const stateWithMultipleEntities: CsvState = {
-            ...initialCsvState,
-            entities: {
-                ...initialCsvState.entities,
-                titles: [{ id: 't1', title: 'Title 1' }],
-                persons: [{ id: 'p1', name: 'Person 1' } as any],
-            },
-        }
-
-        const action = {
-            type: 'ENTITY_DELETE',
-            payload: {
-                entityType: 'titles',
-                id: 't1',
-            },
-        } as const
-
-        const nextState = csvReducer(stateWithMultipleEntities, action)
-
-        expect(nextState.entities.titles).toHaveLength(0)
-        expect(nextState.entities.persons).toHaveLength(1)
-        expect(nextState.entities.persons[0].id).toBe('p1')
-    })
-})
-
-describe('csvReducer — SET_SELECTED', () => {
-    it('SET_SELECTED sets selected correctly', () => {
-        const action = {
-            type: 'SET_SELECTED',
-            payload: {
-                type: 'titles',
-                id: 't1',
-            },
-        } as const
-
-        const nextState = csvReducer(initialCsvState, action)
-
-        expect(nextState.selected).toEqual({
-            type: 'titles',
-            id: 't1',
         })
+
+        const rows = nextState.entities.sections[0].rows
+
+        expect(rows[0].title).toEqual({ id: 'title-1', title: 'Updated target' })
+        expect(rows[0].person).toEqual({ id: 'person-1', name: 'Person A', occupation: 'Role A' })
+        expect(rows[1].title).toEqual({ id: 'title-2', title: 'Other title' })
     })
 
-    it('SET_SELECTED allows selecting non-existing entity (no validation)', () => {
-        const action = {
-            type: 'SET_SELECTED',
-            payload: {
-                type: 'persons',
-                id: 'non-existing-id',
-            },
-        } as const
-
-        const nextState = csvReducer(initialCsvState, action)
-
-        expect(nextState.selected).toEqual({
-            type: 'persons',
-            id: 'non-existing-id',
+    it('ENTITY_DELETE deletes only the target entity', () => {
+        const invited = invitedSection({
+            rows: [
+                {
+                    id: 'row-1',
+                    title: { id: 'title-1', title: 'Delete me' },
+                    person: { id: 'person-1', name: 'Keep Person', occupation: 'Role' },
+                },
+                {
+                    id: 'row-2',
+                    title: { id: 'title-2', title: 'Keep title' },
+                },
+            ],
         })
-    })
+        const state = stateWithSections([invited], invited.id)
 
-    it('SET_SELECTED null clears selection', () => {
-        const stateWithSelection: CsvState = {
-            ...initialCsvState,
-            selected: {
-                type: 'titles',
-                id: 't1',
-            },
-        }
-
-        const action = {
-            type: 'SET_SELECTED',
-            payload: null,
-        } as const
-
-        const nextState = csvReducer(stateWithSelection, action)
-
-        expect(nextState.selected).toBeNull()
-    })
-
-    it('SET_SELECTED does NOT modify activeEntityType', () => {
-        const stateWithActiveType: CsvState = {
-            ...initialCsvState,
-            activeEntityType: 'persons',
-        }
-
-        const action = {
-            type: 'SET_SELECTED',
+        const nextState = csvReducer(state, {
+            type: 'ENTITY_DELETE',
             payload: {
-                type: 'titles',
-                id: 't99',
+                sectionId: invited.id,
+                entityType: 'titles',
+                id: 'title-1',
             },
-        } as const
+        })
 
-        const nextState = csvReducer(stateWithActiveType, action)
+        const rows = nextState.entities.sections[0].rows
 
-        expect(nextState.activeEntityType).toBe('persons')
+        expect(rows).toHaveLength(2)
+        expect(rows[0].title).toBeUndefined()
+        expect(rows[0].person).toEqual({ id: 'person-1', name: 'Keep Person', occupation: 'Role' })
+        expect(rows[1].title).toEqual({ id: 'title-2', title: 'Keep title' })
     })
 })
