@@ -1,6 +1,6 @@
 {
   "name": "electron-vite-react",
-  "version": "2.3.0",
+  "version": "2.3.2",
   "main": "dist-electron/main/index.js",
   "description": "Editor de titluri.",
   "author": "devlilic13",
