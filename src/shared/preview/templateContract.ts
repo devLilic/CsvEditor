@@ -34,12 +34,19 @@ export type BroadcastTextLayer = BaseLayer & {
     fitInBox?: boolean
     fitMode?: 'scaleX'
     minScaleX?: number
+    border?: {
+        color: string
+        width?: number
+        style?: 'solid' | 'dashed' | 'dotted'
+    }
     textStyle: {
         fontFamily: string
         fontSize: number
         fontWeight: number
         color: string
         align: 'left' | 'center' | 'right'
+        lineHeight?: number
+        letterSpacing?: string
         transform?: 'uppercase'
     }
 }

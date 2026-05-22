@@ -18,5 +18,10 @@ describe('QA heartbeat', () => {
         expect(api.setQuickTitles).toBeTypeOf('function')
         expect(api.getAppConfig).toBeTypeOf('function')
         expect(api.setAppConfig).toBeTypeOf('function')
+        expect(api.getDefaultProjectSettings).toBeTypeOf('function')
+        expect(api.setDefaultProjectSettings).toBeTypeOf('function')
+
+        // App menu API
+        expect(api.onMenuNavigate).toBeTypeOf('function')
     })
 })

@@ -81,11 +81,61 @@ function renderEntityEditor() {
 }
 
 describe('EntityEditor', () => {
+    it('uses titleTemplate for titles', () => {
+        const { container } = renderEntityEditor()
+
+        expect(container.querySelector('[data-layer-id="title-main-text"]')).toBeInTheDocument()
+        expect(container.querySelector('[data-layer-id="person-name-text"]')).not.toBeInTheDocument()
+        expect(container.querySelector('[data-layer-id="location-text"]')).not.toBeInTheDocument()
+    })
+
+    it('uses personTemplate for persons', () => {
+        csvHooks.activeEntityType = 'persons'
+        const { container } = renderEntityEditor()
+
+        expect(container.querySelector('[data-layer-id="person-name-text"]')).toBeInTheDocument()
+        expect(container.querySelector('[data-layer-id="person-occupation-text"]')).toBeInTheDocument()
+        expect(container.querySelector('[data-layer-id="title-main-text"]')).not.toBeInTheDocument()
+    })
+
+    it('uses locationTemplate for locations', () => {
+        csvHooks.activeEntityType = 'locations'
+        const { container } = renderEntityEditor()
+
+        expect(container.querySelector('[data-layer-id="location-text"]')).toBeInTheDocument()
+        expect(container.querySelector('[data-layer-id="title-main-text"]')).not.toBeInTheDocument()
+        expect(container.querySelector('[data-layer-id="person-name-text"]')).not.toBeInTheDocument()
+    })
+
     it('renders without crashing in a valid CSV context and shows the preview', () => {
         renderEntityEditor()
 
-        expect(screen.getByText(/PREVIEW/i)).toBeInTheDocument()
+        expect(screen.getByTestId('entity-preview-container')).toHaveClass(
+            'min-h-0',
+            'min-w-0',
+            'overflow-hidden'
+        )
+        expect(screen.getByTestId('preview16x9-root')).toBeInTheDocument()
         expect(screen.getByLabelText('Titlu')).toBeInTheDocument()
+    })
+
+    it('passes template and data to the new preview API', async () => {
+        const user = userEvent.setup()
+        const { container } = renderEntityEditor()
+
+        expect(screen.getByTestId('preview16x9-root')).toBeInTheDocument()
+        expect(container.querySelector('[data-layer-id="title-main-text"]')).toBeInTheDocument()
+        expect(screen.getByText('TITLU')).toBeInTheDocument()
+
+        await user.type(screen.getByLabelText('Titlu'), 'Breaking News')
+
+        expect(screen.getByText('BREAKING NEWS')).toBeInTheDocument()
+    })
+
+    it('does not render the old Preview16x9 entityType/content/measureText UI', () => {
+        renderEntityEditor()
+
+        expect(screen.queryByText(/PREVIEW/i)).not.toBeInTheDocument()
     })
 
     it('allows filling the title input and enables Adauga when valid', async () => {
@@ -100,6 +150,7 @@ describe('EntityEditor', () => {
         await user.type(titleInput, 'Breaking News')
 
         expect(titleInput).toHaveValue('Breaking News')
+        expect(screen.getByText('BREAKING NEWS')).toBeInTheDocument()
         expect(addButton).toBeEnabled()
     })
 
@@ -114,6 +165,90 @@ describe('EntityEditor', () => {
         expect(csvHooks.addEntity).toHaveBeenCalledWith('invited-1', 'titles', {
             title: 'BREAKING NEWS',
         })
+    })
+
+    it('saving a valid person uses name and occupation fields', async () => {
+        csvHooks.activeEntityType = 'persons'
+        const user = userEvent.setup()
+        renderEntityEditor()
+
+        await user.type(screen.getByLabelText('Nume'), 'Ana Popescu')
+        await user.type(screen.getByLabelText('Funcție'), 'Reporter')
+
+        expect(screen.getByText('ANA POPESCU')).toBeInTheDocument()
+        expect(screen.getByText('Reporter')).toBeInTheDocument()
+
+        await user.click(screen.getByRole('button', { name: /Adaug/i }))
+
+        expect(csvHooks.addEntity).toHaveBeenCalledTimes(1)
+        expect(csvHooks.addEntity).toHaveBeenCalledWith('invited-1', 'persons', {
+            name: 'ANA POPESCU',
+            occupation: 'Reporter',
+        })
+    })
+
+    it('saving a valid location uses the location field', async () => {
+        csvHooks.activeEntityType = 'locations'
+        const user = userEvent.setup()
+        renderEntityEditor()
+
+        await user.type(screen.getByLabelText('Locație'), 'Chișinău')
+        expect(screen.getByText('CHIȘINĂU')).toBeInTheDocument()
+
+        await user.click(screen.getByRole('button', { name: /Adaug/i }))
+
+        expect(csvHooks.addEntity).toHaveBeenCalledTimes(1)
+        expect(csvHooks.addEntity).toHaveBeenCalledWith('invited-1', 'locations', {
+            location: 'CHIȘINĂU',
+        })
+    })
+
+    it('does not render form inputs for unsupported hot or wait entity types', () => {
+        csvHooks.activeEntityType = 'hotTitles'
+        const { rerender } = renderEntityEditor()
+
+        expect(screen.queryByLabelText('Titlu')).not.toBeInTheDocument()
+        expect(screen.queryByLabelText('Nume')).not.toBeInTheDocument()
+        expect(screen.queryByLabelText('Locație')).not.toBeInTheDocument()
+
+        csvHooks.activeEntityType = 'waitLocations'
+        rerender(
+            <EditModeProvider>
+                <EntityEditor />
+            </EditModeProvider>
+        )
+
+        expect(screen.queryByLabelText('Titlu')).not.toBeInTheDocument()
+        expect(screen.queryByLabelText('Nume')).not.toBeInTheDocument()
+        expect(screen.queryByLabelText('Locație')).not.toBeInTheDocument()
+    })
+
+    it('does not use dedicated templates for hot or wait entity types', () => {
+        csvHooks.activeEntityType = 'hotTitles'
+        const { container, rerender } = renderEntityEditor()
+
+        expect(container.querySelector('[data-layer-id="title-main-text"]')).toBeInTheDocument()
+        expect(container.innerHTML).not.toMatch(/hot|wait/i)
+
+        csvHooks.activeEntityType = 'waitTitles'
+        rerender(
+            <EditModeProvider>
+                <EntityEditor />
+            </EditModeProvider>
+        )
+
+        expect(container.querySelector('[data-layer-id="title-main-text"]')).toBeInTheDocument()
+        expect(container.innerHTML).not.toMatch(/hot|wait/i)
+
+        csvHooks.activeEntityType = 'waitLocations'
+        rerender(
+            <EditModeProvider>
+                <EntityEditor />
+            </EditModeProvider>
+        )
+
+        expect(container.querySelector('[data-layer-id="title-main-text"]')).toBeInTheDocument()
+        expect(container.innerHTML).not.toMatch(/hot|wait/i)
     })
 
     it('changing the active entity type does not crash', () => {
@@ -131,6 +266,6 @@ describe('EntityEditor', () => {
         )
 
         expect(screen.getByLabelText('Nume')).toBeInTheDocument()
-        expect(screen.getByText(/PREVIEW/i)).toBeInTheDocument()
+        expect(screen.getByTestId('preview16x9-root')).toBeInTheDocument()
     })
 })

@@ -148,13 +148,13 @@ export function SectionsTabs() {
                 )
             })}
 
-            <button
-                onClick={() => setAddOpen(true)}
-                className="px-3 py-1 rounded text-sm border bg-white border border-green-300 hover:bg-green-500 hover:text-white"
-                title="Add BETA"
-            >
-                ADAUGĂ BETA
-            </button>
+            {/*<button*/}
+            {/*    onClick={() => setAddOpen(true)}*/}
+            {/*    className="px-3 py-1 rounded text-sm border bg-white border border-green-300 hover:bg-green-500 hover:text-white"*/}
+            {/*    title="Add BETA"*/}
+            {/*>*/}
+            {/*    ADAUGĂ BETA*/}
+            {/*</button>*/}
 
             <TextPromptDialog
                 open={addOpen}

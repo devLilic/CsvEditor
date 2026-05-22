@@ -42,8 +42,9 @@ describe('EntityTypeTabsLeft', () => {
         expect(screen.getByRole('button', { name: 'Persoane' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Locații' })).toBeInTheDocument()
 
-        expect(screen.queryByRole('button', { name: /Ultima/i })).not.toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: /așteptare/i })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Ultima oră' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Titluri așteptare' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Locații așteptare' })).not.toBeInTheDocument()
     })
 
     it('clears selection and changes active type when switching tabs', async () => {

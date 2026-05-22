@@ -13,4 +13,9 @@ export const ipcMock = {
     setQuickTitles: vi.fn(),
     getAppConfig: vi.fn(),
     setAppConfig: vi.fn(),
+    getDefaultProjectSettings: vi.fn(),
+    setDefaultProjectSettings: vi.fn(),
+
+    // App menu
+    onMenuNavigate: vi.fn(() => vi.fn()),
 }

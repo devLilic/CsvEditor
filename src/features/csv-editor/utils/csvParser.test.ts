@@ -4,6 +4,42 @@ import { parseCsv } from './csvParser'
 const header = 'Nr;Titlu;Nume;Functie;Locatie;Ultima Ora;Titlu Asteptare;Locatie Asteptare'
 
 describe('parseCsv', () => {
+    it('does not crash when CSV contains legacy Ultima Ora column', () => {
+        const csv = [
+            'Nr;Titlu;Nume;Functie;Locatie;Ultima Ora',
+            '1;Titlu simplu;;;;Urgent',
+        ].join('\n')
+
+        const result = parseCsv(csv)
+
+        expect(result.sections[0].rows[0].title?.title).toBe('Titlu simplu')
+        expect(result.sections[0].rows[0].hotTitle).toBeUndefined()
+    })
+
+    it('does not crash when CSV contains legacy Titlu Asteptare column', () => {
+        const csv = [
+            'Nr;Titlu;Nume;Functie;Locatie;Titlu Asteptare',
+            '1;Titlu simplu;;;;Titlu asteptare',
+        ].join('\n')
+
+        const result = parseCsv(csv)
+
+        expect(result.sections[0].rows[0].title?.title).toBe('Titlu simplu')
+        expect(result.sections[0].rows[0].waitTitle).toBeUndefined()
+    })
+
+    it('does not crash when CSV contains legacy Locatie Asteptare column', () => {
+        const csv = [
+            'Nr;Titlu;Nume;Functie;Locatie;Locatie Asteptare',
+            '1;Titlu simplu;;;;Studio',
+        ].join('\n')
+
+        const result = parseCsv(csv)
+
+        expect(result.sections[0].rows[0].title?.title).toBe('Titlu simplu')
+        expect(result.sections[0].rows[0].waitLocation).toBeUndefined()
+    })
+
     it('parses CSV without markers as a single invited section', () => {
         const csv = [
             header,
@@ -17,8 +53,9 @@ describe('parseCsv', () => {
         expect(result.sections[0].rows).toHaveLength(1)
         expect(result.sections[0].rows[0].title?.title).toBe('Titlu simplu')
         expect(result.sections[0].rows[0].person?.name).toBe('Ion Popescu')
-        expect(result.sections[0].rows[0].waitTitle?.title).toBe('Asteptare')
-        expect(result.sections[0].rows[0].waitLocation?.location).toBe('Studio')
+        expect(result.sections[0].rows[0].hotTitle).toBeUndefined()
+        expect(result.sections[0].rows[0].waitTitle).toBeUndefined()
+        expect(result.sections[0].rows[0].waitLocation).toBeUndefined()
     })
 
     it('creates BETA and INVITATI sections in marker order with invited last', () => {
@@ -37,7 +74,10 @@ describe('parseCsv', () => {
         expect(result.sections[0].betaTitle).toBe('Externe')
         expect(result.sections[0].rows[0].title?.title).toBe('Titlu beta')
         expect(result.sections[0].rows[0].waitTitle).toBeUndefined()
-        expect(result.sections[1].rows[0].waitTitle?.title).toBe('Titlu asteptare')
+        expect(result.sections[1].rows[0].title?.title).toBe('Titlu invitati')
+        expect(result.sections[1].rows[0].hotTitle).toBeUndefined()
+        expect(result.sections[1].rows[0].waitTitle).toBeUndefined()
+        expect(result.sections[1].rows[0].waitLocation).toBeUndefined()
     })
 
     it('does not create false entities from empty rows', () => {

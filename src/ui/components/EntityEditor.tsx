@@ -1,6 +1,7 @@
 // src/ui/components/EntityEditor.tsx
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useEntities, useSelectedEntity, useActiveEntityType } from '@/features/csv-editor'
+import { createPreviewData, getTemplateForEntityType } from '@/templates/broadcast'
 import { Preview16x9 } from './Preview16x9'
 import { QuickTitlesBar } from './QuickTitlesBar'
 import { InputField } from './common/InputField'
@@ -12,19 +13,11 @@ type FormState = {
     location?: string
 }
 
-type EntityType =
-    | 'titles'
-    | 'persons'
-    | 'locations'
-    | 'hotTitles'
-    | 'waitTitles'
-    | 'waitLocations'
-
 export function EntityEditor() {
     const { activeSectionId, activeSection, getBlockItems, addEntity, updateEntity } = useEntities()
 
     const { selected, clearSelection } = useSelectedEntity()
-    const { activeEntityType, setActiveEntityType } = useActiveEntityType()
+    const { activeEntityType } = useActiveEntityType()
 
     const [showInvalid, setShowInvalid] = useState(false)
     const [form, setForm] = useState<FormState>({})
@@ -36,8 +29,6 @@ export function EntityEditor() {
     const locationRef = useRef<HTMLInputElement>(null)
 
     const sectionId = activeSectionId ?? activeSection?.id ?? ''
-    const isInvited = activeSection?.kind === 'invited'
-
     // ✅ memoize list + selectedItem (prevents "Maximum update depth exceeded")
     const selectedItems = useMemo(() => {
         if (!selected) return []
@@ -54,7 +45,7 @@ export function EntityEditor() {
         let el: HTMLInputElement | null = null
 
         if (activeEntityType === 'persons') el = nameRef.current
-        else if (activeEntityType === 'locations' || activeEntityType === 'waitLocations') el = locationRef.current
+        else if (activeEntityType === 'locations') el = locationRef.current
         else el = titleRef.current
 
         if (!el) return
@@ -97,7 +88,6 @@ export function EntityEditor() {
                 break
 
             case 'locations':
-            case 'waitLocations':
                 setForm({
                     location: data?.location ?? '',
                 })
@@ -152,12 +142,9 @@ export function EntityEditor() {
                 return Boolean(form.name?.trim())
 
             case 'locations':
-            case 'waitLocations':
                 return Boolean(form.location?.trim())
 
             case 'titles':
-            case 'hotTitles':
-            case 'waitTitles':
             default:
                 return Boolean(form.title?.trim())
         }
@@ -196,36 +183,26 @@ export function EntityEditor() {
         requestAnimationFrame(() => focusTitleInput())
     }
 
-    // ✅ Buttons: force create-mode for a given entity type
-    const startCreate = (type: EntityType) => {
-        clearSelection()
-        setActiveEntityType(type)
-        setForm({})
-        // focus handled by effect
-    }
-
-    // ✅ Trimitem date brute (text/array) către Preview16x9, nu JSX
-    const previewContent =
-        activeEntityType === 'persons'
-            ? [
-                (form.name && form.name.trim() !== '') ? form.name.toUpperCase() : 'NUME',
-                (form.occupation && form.occupation.trim() !== '') ? form.occupation : 'FUNCȚIE'
-            ]
-            : (form.title || form.location || (activeEntityType === 'locations' || activeEntityType === 'waitLocations' ? 'LOCAȚIE' : 'TITLU')).toUpperCase()
-
-    // ✅ measureText rămâne un string simplu, exact cum îl aveai
-    const previewMeasureText =
-        activeEntityType === 'persons'
-            ? `${form.name ?? ''} ${form.occupation ?? ''}`.trim()
-            : (form.title ?? form.location ?? 'TITLU').trim()
+    const previewTemplate = getTemplateForEntityType(activeEntityType)
+    const previewData = createPreviewData(activeEntityType, form)
 
     return (
-        <div className="bg-white rounded border p-4 flex flex-col gap-4">
+        <div className="bg-white rounded border p-4 flex flex-col gap-4 min-h-0 min-w-0 max-w-full overflow-hidden">
 
-            <Preview16x9 entityType={activeEntityType} content={previewContent} measureText={previewMeasureText} />
+            <div
+                data-testid="entity-preview-container"
+                className="min-h-0 min-w-0 overflow-hidden"
+            >
+                <Preview16x9
+                    template={previewTemplate}
+                    data={previewData}
+                    fitMode="width"
+                    maxHeight={700}
+                />
+            </div>
 
             {/* inputs */}
-            <div className="flex flex-col gap-3 w-full font-bold">
+            <div className="flex flex-col gap-3 w-full font-bold shrink-0">
                 {activeEntityType === 'persons' && (
                     <>
                         <InputField
@@ -248,7 +225,7 @@ export function EntityEditor() {
                     </>
                 )}
 
-                {(activeEntityType === 'locations' || activeEntityType === 'waitLocations') && (
+                {activeEntityType === 'locations' && (
                     <InputField
                         label="Locație"
                         value={form.location ?? ''}
@@ -260,7 +237,7 @@ export function EntityEditor() {
                     />
                 )}
 
-                {(activeEntityType === 'titles' || activeEntityType === 'hotTitles' || activeEntityType === 'waitTitles') && (
+                {activeEntityType === 'titles' && (
                     <InputField
                         label="Titlu"
                         value={form.title ?? ''}
@@ -277,14 +254,14 @@ export function EntityEditor() {
                 disabled={!isFormValid()}
                 className={`py-2 rounded text-white ${
                     isFormValid() ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
-                }`}
+                } shrink-0`}
             >
                 {selected ? 'Update' : 'Adaugă'}
             </button>
 
             {/* QuickTitles doar la TITLES */}
             {activeEntityType === 'titles' && (
-                <div className="border-t pt-3 mt-2">
+                <div className="border-t pt-3 mt-2 shrink-0">
                     <div className="text-xs text-gray-500 mb-2">Prefixe rapide</div>
                     <QuickTitlesBar onApplyPrefix={applyQuickTitle} focusEditor={focusTitleInput} />
                 </div>

@@ -5,17 +5,19 @@ import { useEffect, useRef } from 'react'
 import { csvService } from '../services/csvService'
 import { parseCsv } from '../utils/csvParser'
 import { useCsvContext } from '../context/CsvContext'
+import { createDefaultProjectEntities } from '../domain/defaultProject'
+import { defaultProjectSettingsService } from '../services/defaultProjectSettingsService'
 
 /**
- * Hook responsabil exclusiv de inițializarea CSV:
- * - încearcă getLastCsv()
+ * Hook responsabil exclusiv de initializarea CSV:
+ * - incearca getLastCsv()
  * - fallback openCsvDialog()
  * - parse CSV
  * - dispatch CSV_LOADED
  *
- * ❌ NU autosave
- * ❌ NU UI logic
- * ❌ NU Electron direct
+ * NU autosave
+ * NU UI logic
+ * NU Electron direct
  */
 export function useCsvInitialization() {
     const { dispatch, state } = useCsvContext()
@@ -28,7 +30,6 @@ export function useCsvInitialization() {
         hasInitializedRef.current = true
 
         ;(async () => {
-            // 1️⃣ încearcă să încarce ultimul CSV
             const last = await csvService.getLast()
             if (last?.content) {
                 const entities = parseCsv(last.content)
@@ -39,7 +40,6 @@ export function useCsvInitialization() {
                 return
             }
 
-            // 2️⃣ fallback: dialog manual
             const opened = await csvService.openDialog()
             if (opened?.content) {
                 const entities = parseCsv(opened.content)
@@ -50,12 +50,12 @@ export function useCsvInitialization() {
                 return
             }
 
-            // 3️⃣ nimic ales → aplicația rămâne loaded cu state gol
-            // IMPORTANT: payload explicit, predictibil pentru QA (reducerul va asigura INVITATI)
+            const defaultProjectSettings = await defaultProjectSettingsService.getDefaultProjectSettings()
+
             dispatch({
                 type: 'CSV_LOADED',
-                payload: { sections: [] },
+                payload: createDefaultProjectEntities(defaultProjectSettings),
             })
         })()
-    }, [dispatch, state.isLoaded, state.entities])
+    }, [dispatch, state.isLoaded])
 }

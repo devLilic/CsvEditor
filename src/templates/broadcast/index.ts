@@ -1,6 +1,8 @@
 export { broadcastTemplates } from './templates'
 export { broadcastSampleData } from './sampleData'
 export { supportedBroadcastEntityTypes } from './supportedEntityTypes'
+export { getTemplateForEntityType } from './getTemplateForEntityType'
+export { createPreviewData } from './createPreviewData'
 export { titleTemplate } from './titleTemplate'
 export { personTemplate } from './personTemplate'
 export { locationTemplate } from './locationTemplate'

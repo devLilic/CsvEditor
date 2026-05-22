@@ -1,11 +1,12 @@
 // electron/main/index.ts
-import { app, BrowserWindow, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Menu } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
 import { update } from './update'
 import { registerCsvHandlers } from './csv-handlers'
 import { registerSettingsHandlers } from './settings-handlers'
+import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -45,6 +46,28 @@ const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
 const SPELLCHECK_LANGUAGES = ['ro']
 
+function sendMenuNavigate(window: BrowserWindow, route: string) {
+  window.webContents.send(IPC_CHANNELS.APP_MENU_NAVIGATE, route)
+}
+
+function createAppMenu(window: BrowserWindow) {
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Setări',
+      submenu: [
+        {
+          label: 'Setări proiect nou',
+          click: () => sendMenuNavigate(window, '/settings/default-project'),
+        },
+      ],
+    },
+  ])
+
+  Menu.setApplicationMenu(menu)
+  window.setMenu(menu)
+  window.setMenuBarVisibility(true)
+}
+
 function configureSpellChecker(window: BrowserWindow) {
   const { session } = window.webContents
   const languages = SPELLCHECK_LANGUAGES.filter((language) =>
@@ -62,7 +85,7 @@ async function createWindow() {
     height: 900,
     title: 'devTitles',
     fullscreenable: true,
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
     webPreferences: {
       preload,
@@ -77,8 +100,7 @@ async function createWindow() {
   })
 
   configureSpellChecker(win)
-  win.removeMenu()
-  win.setMenuBarVisibility(false)
+  createAppMenu(win)
 
   win.once('ready-to-show', () => {
     win?.maximize()
@@ -145,15 +167,14 @@ ipcMain.handle('open-win', (_, arg) => {
     autoHideMenuBar: true,
     webPreferences: {
       preload,
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
       spellcheck: true,
     },
   })
 
   configureSpellChecker(childWindow)
-  childWindow.removeMenu()
-  childWindow.setMenuBarVisibility(false)
+  createAppMenu(childWindow)
 
   if (VITE_DEV_SERVER_URL) {
     childWindow.loadURL(`${VITE_DEV_SERVER_URL}#${arg}`)

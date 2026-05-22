@@ -2,7 +2,15 @@
 import { ipcMain } from 'electron'
 import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
 import type { AppConfig } from '../../src/shared/ipc-types'
-import { getQuickTitles, setQuickTitles, getAppConfig, setAppConfig } from '../store'
+import { isDefaultProjectSettings } from '../../src/features/csv-editor/domain/defaultProjectSettings'
+import {
+    getQuickTitles,
+    setQuickTitles,
+    getAppConfig,
+    setAppConfig,
+    getDefaultProjectSettings,
+    setDefaultProjectSettings,
+} from '../store'
 
 function isStringArray(value: unknown): value is string[] {
     return Array.isArray(value) && value.every((v) => typeof v === 'string')
@@ -53,6 +61,29 @@ export function registerSettingsHandlers() {
         } catch (error) {
             console.error('[settings:set-config] failed:', error)
             return getAppConfig()
+        }
+    })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_GET_DEFAULT_PROJECT, () => {
+        try {
+            return getDefaultProjectSettings()
+        } catch (error) {
+            console.error('[settings:get-default-project] failed:', error)
+            return getDefaultProjectSettings()
+        }
+    })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_SET_DEFAULT_PROJECT, (_event, settings: unknown) => {
+        try {
+            if (!isDefaultProjectSettings(settings)) {
+                console.warn('[settings:set-default-project] invalid payload, expected DefaultProjectSettings')
+                return getDefaultProjectSettings()
+            }
+
+            return setDefaultProjectSettings(settings)
+        } catch (error) {
+            console.error('[settings:set-default-project] failed:', error)
+            return getDefaultProjectSettings()
         }
     })
 }

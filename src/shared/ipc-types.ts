@@ -1,5 +1,6 @@
 // src/shared/ipc-types.ts
 import { IPC_CHANNELS } from './ipc-channels'
+import type { DefaultProjectSettings } from '../features/csv-editor/domain/defaultProjectSettings'
 
 export interface CsvFileDescriptor {
     path: string
@@ -59,6 +60,16 @@ export interface IpcInvokeMap {
         request: AppConfig
         response: AppConfig
     }
+
+    [IPC_CHANNELS.SETTINGS_GET_DEFAULT_PROJECT]: {
+        request: void
+        response: DefaultProjectSettings
+    }
+
+    [IPC_CHANNELS.SETTINGS_SET_DEFAULT_PROJECT]: {
+        request: DefaultProjectSettings
+        response: DefaultProjectSettings
+    }
 }
 
 export type IpcChannel = keyof IpcInvokeMap
@@ -78,4 +89,9 @@ export interface RendererApi {
 
     getAppConfig(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_GET_CONFIG>>
     setAppConfig(cfg: IpcRequest<typeof IPC_CHANNELS.SETTINGS_SET_CONFIG>): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SET_CONFIG>>
+
+    getDefaultProjectSettings(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_GET_DEFAULT_PROJECT>>
+    setDefaultProjectSettings(settings: IpcRequest<typeof IPC_CHANNELS.SETTINGS_SET_DEFAULT_PROJECT>): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SET_DEFAULT_PROJECT>>
+
+    onMenuNavigate(callback: (route: string) => void): () => void
 }

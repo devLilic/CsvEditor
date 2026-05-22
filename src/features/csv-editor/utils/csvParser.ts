@@ -36,24 +36,18 @@ function isCompletelyEmptyRow(row: CsvRowRaw): boolean {
     })
 }
 
-function buildRowFromCsv(row: CsvRowRaw, allowWait: boolean): Omit<SectionRow, 'id'> | null {
+function buildRowFromCsv(row: CsvRowRaw): Omit<SectionRow, 'id'> | null {
     const titleText = cell(row, CSV_COLUMNS.TITLE)
     const name = cell(row, CSV_COLUMNS.PERSON_NAME)
     const occupation = cell(row, CSV_COLUMNS.PERSON_OCCUPATION)
     const loc = cell(row, CSV_COLUMNS.LOCATION)
-    const hot = cell(row, CSV_COLUMNS.HOT_TITLE)
-    const wt = cell(row, CSV_COLUMNS.WAIT_TITLE)
-    const wl = cell(row, CSV_COLUMNS.WAIT_LOCATION)
 
     // empty row inside a section -> ignore (no delimiter concept anymore)
     if (
         titleText === '' &&
         name === '' &&
         occupation === '' &&
-        loc === '' &&
-        hot === '' &&
-        wt === '' &&
-        wl === ''
+        loc === ''
     ) {
         return null
     }
@@ -75,20 +69,6 @@ function buildRowFromCsv(row: CsvRowRaw, allowWait: boolean): Omit<SectionRow, '
         out.location = l
     }
 
-    if (hot !== '') {
-        const h: SimpleTitle = { id: uuidv4(), title: hot }
-        out.hotTitle = h
-    }
-
-    if (allowWait) {
-        if (wt !== '') {
-            out.waitTitle = { id: uuidv4(), title: wt }
-        }
-        if (wl !== '') {
-            out.waitLocation = { id: uuidv4(), location: wl }
-        }
-    }
-
     return out
 }
 
@@ -102,6 +82,7 @@ function buildRowFromCsv(row: CsvRowRaw, allowWait: boolean): Omit<SectionRow, '
  * - Marker rows do not create content rows; they only switch current section.
  * - Rows are stored canonically as section.rows[] (packing model).
  * - If no markers exist → fallback to single INVITATI section with all rows.
+ * - Legacy hot/wait columns are tolerated but ignored in this version.
  */
 export function parseCsv(content: string): EntitiesState {
     const parsed = Papa.parse<CsvRowRaw>(content, {
@@ -162,8 +143,7 @@ export function parseCsv(content: string): EntitiesState {
         }
 
         // content row
-        const allowWait = current?.kind === 'invited' || (!current && !sawAnyMarker)
-        const rowData = buildRowFromCsv(row, Boolean(allowWait))
+        const rowData = buildRowFromCsv(row)
         if (!rowData) return
 
         if (!current) {

@@ -1,6 +1,5 @@
 // src/ui/components/layout/EditorHeader.tsx
 import { useEntities } from '@/features/csv-editor'
-import { Link } from 'react-router-dom'
 import { EditModeToggle } from '@/ui/components/EditModeToggle'
 import { useTitleFilter } from '@/ui/context/TitleFilterContext'
 import { SectionsTabs } from '@/ui/components/SectionsTabs'
@@ -80,14 +79,21 @@ function TrashIcon() {
 }
 
 export function EditorHeader() {
-    const { clearAll, loadCsv } = useEntities()
+    const { startNewProject, loadCsv } = useEntities()
     const { titleFilter, setTitleFilter } = useTitleFilter()
+
+    const handleStartNewProject = async () => {
+        const result = await startNewProject()
+        if (!result.ok) {
+            window.alert(`Nu s-a putut porni proiectul nou: ${result.error}`)
+        }
+    }
 
     return (
         <div className="flex items-center justify-between gap-4 border-b bg-white px-4 py-2">
             <SectionsTabs />
 
-            <div className='relative flex items-center'>
+            <div className="relative flex items-center">
                 <input
                     type="text"
                     value={titleFilter}
@@ -95,14 +101,16 @@ export function EditorHeader() {
                     placeholder="Caută titlul"
                     className="w-64 rounded border border-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button onClick={(e) => setTitleFilter('')}
-                        className='absolute right-1 px-2 py-2 text-sm text-gray-500 bg-transparent hover:bg-blue-100 hover:bg-gray-100'
-                ><TrashIcon /></button>
+                <button
+                    onClick={() => setTitleFilter('')}
+                    className="absolute right-1 bg-transparent px-2 py-2 text-sm text-gray-500 hover:bg-gray-100"
+                    aria-label="Curăță filtrul"
+                >
+                    <TrashIcon />
+                </button>
             </div>
 
             <div className="flex items-center gap-2">
-
-
                 <EditModeToggle />
 
                 <button
@@ -110,20 +118,19 @@ export function EditorHeader() {
                     className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-1 text-white"
                 >
                     <FileIcon />
-                    Selecteaza CSV
+                    Selectează CSV
                 </button>
 
                 <ConfirmDialog
-                    title="Stergi tot continutul?"
-                    description="Aceasta actiune nu poate fi anulata."
-                    onConfirm={() => clearAll()}
+                    title="Începi un proiect nou?"
+                    description="Se va crea automat un backup al CSV-ului curent. Apoi CSV-ul curent va fi rescris cu textele standard pentru proiect nou."
+                    onConfirm={handleStartNewProject}
                 >
                     <button className="inline-flex items-center gap-2 rounded bg-red-600 px-4 py-1 text-white">
                         <TrashIcon />
-                        Sterge
+                        Proiect nou
                     </button>
                 </ConfirmDialog>
-
             </div>
         </div>
     )

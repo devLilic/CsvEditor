@@ -11,6 +11,7 @@ type TextLayerRendererProps = {
 export function TextLayerRenderer({ layer, data, sampleData }: TextLayerRendererProps) {
     const textRef = useRef<HTMLSpanElement | null>(null)
     const [scaleX, setScaleX] = useState(1)
+    const textFitPaddingPx = 8
     const text = resolveLayerText({
         fieldId: layer.fieldId,
         data,
@@ -20,11 +21,18 @@ export function TextLayerRenderer({ layer, data, sampleData }: TextLayerRenderer
     })
     const displayText = layer.textStyle.transform === 'uppercase' ? text.toUpperCase() : text
     const fitEnabled = layer.fitInBox !== false
+    const borderWidth = layer.border?.width ?? 1
+    const borderStyle = layer.border?.style ?? 'solid'
     const transformOrigin = layer.textStyle.align === 'right'
         ? 'right center'
         : layer.textStyle.align === 'center'
             ? 'center center'
             : 'left center'
+    const textPositionStyle = layer.textStyle.align === 'right'
+        ? { right: 0, transform: `scaleX(${scaleX})` }
+        : layer.textStyle.align === 'center'
+            ? { left: '50%', transform: `translateX(-50%) scaleX(${scaleX})` }
+            : { left: 0, transform: `scaleX(${scaleX})` }
 
     const measureText = useCallback(() => {
         if (!fitEnabled) {
@@ -38,11 +46,11 @@ export function TextLayerRenderer({ layer, data, sampleData }: TextLayerRenderer
         const nextScale = calculateTextScale({
             textWidth: textElement.scrollWidth,
             boxWidth: layer.width,
-            minScaleX: layer.minScaleX,
+            fitPaddingPx: textFitPaddingPx,
         })
 
         setScaleX((prev) => (Math.abs(prev - nextScale) < 0.001 ? prev : nextScale))
-    }, [fitEnabled, layer.minScaleX, layer.width])
+    }, [fitEnabled, layer.width])
 
     useLayoutEffect(() => {
         let raf = 0
@@ -85,16 +93,24 @@ export function TextLayerRenderer({ layer, data, sampleData }: TextLayerRenderer
                 fontFamily: layer.textStyle.fontFamily,
                 fontSize: layer.textStyle.fontSize,
                 fontWeight: layer.textStyle.fontWeight,
+                lineHeight: layer.textStyle.lineHeight,
+                letterSpacing: layer.textStyle.letterSpacing,
                 textAlign: layer.textStyle.align,
+                outline: layer.border
+                    ? `${borderWidth}px ${borderStyle} ${layer.border.color}`
+                    : undefined,
+                outlineOffset: layer.border ? `-${borderWidth}px` : undefined,
             }}
         >
             <span
                 ref={textRef}
                 style={{
+                    position: 'absolute',
+                    top: 0,
+                    ...textPositionStyle,
                     display: 'inline-block',
                     maxWidth: 'none',
                     whiteSpace: 'nowrap',
-                    transform: `scaleX(${scaleX})`,
                     transformOrigin,
                 }}
             >

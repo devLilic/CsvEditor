@@ -51,13 +51,12 @@ function packSectionRows(section: CsvSection): Record<string, string>[] {
             [CSV_COLUMNS.PERSON_OCCUPATION]: r.person?.occupation ?? '',
 
             [CSV_COLUMNS.LOCATION]: r.location?.location ?? '',
-            [CSV_COLUMNS.HOT_TITLE]: r.hotTitle?.title ?? '',
+            [CSV_COLUMNS.HOT_TITLE]: '',
 
-            // only invited section should emit wait columns; beta emits empty cells
-            [CSV_COLUMNS.WAIT_TITLE]:
-                section.kind === 'invited' ? (r.waitTitle?.title ?? '') : '',
-            [CSV_COLUMNS.WAIT_LOCATION]:
-                section.kind === 'invited' ? (r.waitLocation?.location ?? '') : '',
+            // Legacy hot/wait columns stay in the CSV header for compatibility,
+            // but the current UI scope no longer generates values for them.
+            [CSV_COLUMNS.WAIT_TITLE]: '',
+            [CSV_COLUMNS.WAIT_LOCATION]: '',
         })
     }
 

@@ -1,22 +1,24 @@
 // src/features/csv-editor/hooks/useEntities.ts
 import { useCallback, useMemo } from 'react'
-import { v4 as uuidv4 } from 'uuid'
 import { useCsvContext } from '../context/CsvContext'
 import type { EntityType, CsvSection, SimpleTitle, Person, Location, SectionRow } from '../domain/entities'
 import type { SelectedEntity } from '../domain/csv.types'
+import { isSupportedEntityType } from '../domain/supportedEntityTypes'
+import { createDefaultProjectEntities } from '../domain/defaultProject'
+import { FALLBACK_DEFAULT_PROJECT_SETTINGS } from '../domain/defaultProjectSettings'
 import { csvService } from '../services/csvService'
-import { settingsService } from '../services/settingsService'
+import { defaultProjectSettingsService } from '../services/defaultProjectSettingsService'
 import { parseCsv } from '../utils/csvParser'
 import { serializeCsv } from '../utils/csvSerializer'
-import { createInvitedSection } from '../domain/entities'
 
 type BlockItem =
     | { entityType: 'titles'; id: string; rowId: string; data: SimpleTitle }
     | { entityType: 'persons'; id: string; rowId: string; data: Person }
     | { entityType: 'locations'; id: string; rowId: string; data: Location }
-    | { entityType: 'hotTitles'; id: string; rowId: string; data: SimpleTitle }
-    | { entityType: 'waitTitles'; id: string; rowId: string; data: SimpleTitle }
-    | { entityType: 'waitLocations'; id: string; rowId: string; data: Location }
+
+export type StartNewProjectResult =
+    | { ok: true }
+    | { ok: false; error: string }
 
 function rowsToBlockItems(section: CsvSection, entityType: EntityType): BlockItem[] {
     const out: BlockItem[] = []
@@ -25,9 +27,6 @@ function rowsToBlockItems(section: CsvSection, entityType: EntityType): BlockIte
         if (entityType === 'titles' && r.title) out.push({ entityType: 'titles', id: r.title.id, rowId: r.id, data: r.title })
         if (entityType === 'persons' && r.person) out.push({ entityType: 'persons', id: r.person.id, rowId: r.id, data: r.person })
         if (entityType === 'locations' && r.location) out.push({ entityType: 'locations', id: r.location.id, rowId: r.id, data: r.location })
-        if (entityType === 'hotTitles' && r.hotTitle) out.push({ entityType: 'hotTitles', id: r.hotTitle.id, rowId: r.id, data: r.hotTitle })
-        if (entityType === 'waitTitles' && section.kind === 'invited' && r.waitTitle) out.push({ entityType: 'waitTitles', id: r.waitTitle.id, rowId: r.id, data: r.waitTitle })
-        if (entityType === 'waitLocations' && section.kind === 'invited' && r.waitLocation) out.push({ entityType: 'waitLocations', id: r.waitLocation.id, rowId: r.id, data: r.waitLocation })
     }
 
     return out
@@ -74,6 +73,7 @@ export function useEntities() {
     // -------- READ block items --------
     const getBlockItems = useCallback(
         (sectionId: string, entityType: EntityType): BlockItem[] => {
+            if (!isSupportedEntityType(entityType)) return []
             const s = sections.find((x) => x.id === sectionId)
             if (!s) return []
             return rowsToBlockItems(s, entityType)
@@ -92,6 +92,7 @@ export function useEntities() {
     // -------- CREATE --------
     const addEntity = useCallback(
         (sectionId: string, entityType: EntityType, data: Record<string, unknown>) => {
+            if (!isSupportedEntityType(entityType)) return
             dispatch({ type: 'ENTITY_ADD', payload: { sectionId, entityType, data } })
         },
         [dispatch]
@@ -100,6 +101,7 @@ export function useEntities() {
     // -------- UPDATE --------
     const updateEntity = useCallback(
         (sectionId: string, entityType: EntityType, id: string, data: Record<string, unknown>) => {
+            if (!isSupportedEntityType(entityType)) return
             dispatch({ type: 'ENTITY_UPDATE', payload: { sectionId, entityType, id, data } })
         },
         [dispatch]
@@ -108,49 +110,59 @@ export function useEntities() {
     // -------- DELETE --------
     const deleteEntity = useCallback(
         (sectionId: string, entityType: EntityType, id: string) => {
+            if (!isSupportedEntityType(entityType)) return
             dispatch({ type: 'ENTITY_DELETE', payload: { sectionId, entityType, id } })
         },
         [dispatch]
     )
 
-    // -------- CLEAR ALL (CANONICAL) --------
+    // -------- START NEW PROJECT (CANONICAL) --------
     /**
-     * Clear all should:
-     * 1) backup CSV (safe)
-     * 2) reset entities -> only INVITATI section empty
-     * 3) clear quickTitles (persisted)
-     * 4) write empty CSV (so disk matches state)
+     * Start a new project:
+     * 1) read saved default project settings
+     * 2) build default project entities
+     * 3) backup current CSV
+     * 4) reset entities -> default project seed
+     * 5) write default project CSV (so disk matches state)
      */
-    const clearAll = useCallback(async () => {
-        // 1) backup current CSV
+    const startNewProject = useCallback(async (): Promise<StartNewProjectResult> => {
+        // 1) read settings and 2) build default project entities
+        const defaultProjectSettings = await defaultProjectSettingsService
+            .getDefaultProjectSettings()
+            .catch((error) => {
+                console.error('Failed to read default project settings:', error)
+                return FALLBACK_DEFAULT_PROJECT_SETTINGS
+            })
+        const nextEntities = createDefaultProjectEntities(defaultProjectSettings)
+
+        // 3) backup current CSV
         const currentCsv = serializeCsv(state.entities)
         const backupRes = await csvService.backup(currentCsv)
         if (!backupRes.ok) {
             console.error('Backup failed:', backupRes.error)
+            return {
+                ok: false,
+                error: `Backup failed: ${backupRes.error ?? 'UNKNOWN_ERROR'}`,
+            }
         }
 
-        // 2) build empty entities: only INVITATI
-        const invitedId = uuidv4()
-        const nextEntities = {
-            sections: [createInvitedSection(invitedId, [])],
-        }
-
-        // 3) clear quickTitles in settings
-        try {
-            await settingsService.setQuickTitles([])
-        } catch (e) {
-            console.error('Failed to clear quickTitles:', e)
-        }
+        // QuickTitles are global app settings, not project data; keep them on new project.
 
         // 4) reset reducer state
         dispatch({ type: 'ENTITY_CLEAR_ALL', payload: nextEntities })
 
-        // 5) write empty CSV
-        const emptyCsv = serializeCsv(nextEntities)
-        const writeRes = await csvService.write(emptyCsv)
+        // 5) write default project CSV
+        const defaultProjectCsv = serializeCsv(nextEntities)
+        const writeRes = await csvService.write(defaultProjectCsv)
         if (!writeRes.ok) {
             console.error('Failed to write empty CSV:', writeRes.error)
+            return {
+                ok: false,
+                error: `Write failed: ${writeRes.error ?? 'UNKNOWN_ERROR'}`,
+            }
         }
+
+        return { ok: true }
     }, [dispatch, state.entities])
 
     // -------- LOAD CSV --------
@@ -185,7 +197,9 @@ export function useEntities() {
         deleteEntity,
 
         // global ops
-        clearAll,
+        startNewProject,
+        // Legacy alias kept temporarily for old consumers. New code should use startNewProject.
+        clearAll: startNewProject,
 
         // IO
         loadCsv,

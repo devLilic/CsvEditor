@@ -20,7 +20,7 @@ type PreviewFrame = {
 type TextScaleInput = {
     textWidth: number
     boxWidth: number
-    minScaleX?: number
+    fitPaddingPx?: number
 }
 
 type ResolveLayerTextInput = {
@@ -68,12 +68,12 @@ export function calculatePreviewFrameByWidth(input: PreviewFrameByWidthInput): P
 }
 
 export function calculateTextScale(input: TextScaleInput): number {
-    const minScaleX = input.minScaleX ?? 0.65
+    const availableBoxWidth = Math.max(0, input.boxWidth - (input.fitPaddingPx ?? 0))
 
     if (input.textWidth <= 0 || input.boxWidth <= 0) return 1
-    if (input.textWidth <= input.boxWidth) return 1
+    if (input.textWidth <= availableBoxWidth) return 1
 
-    return Math.max(minScaleX, input.boxWidth / input.textWidth)
+    return availableBoxWidth / input.textWidth
 }
 
 export function resolveLayerText(input: ResolveLayerTextInput): string {

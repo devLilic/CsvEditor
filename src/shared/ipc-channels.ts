@@ -9,6 +9,11 @@ export const IPC_CHANNELS = {
 
     SETTINGS_GET_CONFIG: "settings:get-config",
     SETTINGS_SET_CONFIG: "settings:set-config",
+
+    SETTINGS_GET_DEFAULT_PROJECT: "settings:get-default-project",
+    SETTINGS_SET_DEFAULT_PROJECT: "settings:set-default-project",
+
+    APP_MENU_NAVIGATE: "app-menu:navigate",
 } as const;
 
 export type IpcChannel = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS];

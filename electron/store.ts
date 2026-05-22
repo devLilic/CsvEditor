@@ -1,11 +1,17 @@
 // electron/store.ts
 import Store from 'electron-store'
 import type { AppConfig } from '../src/shared/ipc-types'
+import type { DefaultProjectSettings } from '../src/features/csv-editor/domain/defaultProjectSettings'
+import {
+    FALLBACK_DEFAULT_PROJECT_SETTINGS,
+    normalizeDefaultProjectSettings,
+} from '../src/features/csv-editor/domain/defaultProjectSettings'
 
 export interface AppStoreSchema {
     quickTitles: string[]
     csvFilePath: string | null
     appConfig: AppConfig
+    defaultProjectSettings: DefaultProjectSettings
 }
 
 const store = new Store<AppStoreSchema>({
@@ -13,6 +19,7 @@ const store = new Store<AppStoreSchema>({
         quickTitles: [],
         csvFilePath: null,
         appConfig: {},
+        defaultProjectSettings: FALLBACK_DEFAULT_PROJECT_SETTINGS,
     },
 
 })
@@ -50,6 +57,18 @@ export function setAppConfig(cfg: AppConfig): AppConfig {
     // @ts-ignore
     store.set('appConfig', safeCfg)
     return safeCfg
+}
+
+export function getDefaultProjectSettings(): DefaultProjectSettings {
+    // @ts-ignore
+    return normalizeDefaultProjectSettings(store.get('defaultProjectSettings'))
+}
+
+export function setDefaultProjectSettings(settings: unknown): DefaultProjectSettings {
+    const safeSettings = normalizeDefaultProjectSettings(settings)
+    // @ts-ignore
+    store.set('defaultProjectSettings', safeSettings)
+    return safeSettings
 }
 
 export default store

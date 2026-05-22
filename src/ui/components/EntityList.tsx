@@ -5,6 +5,7 @@ import {
     useSelectedEntity,
     useActiveEntityType,
     useOnAir,
+    isSupportedEntityType,
 } from '@/features/csv-editor'
 import type { EntityType } from '@/features/csv-editor'
 import { EmptyState } from './common/EmptyState'
@@ -22,16 +23,19 @@ export function EntityList() {
     const { titleFilter } = useTitleFilter()
 
     const sectionId = activeSectionId ?? activeSection?.id ?? ''
+    const supportedEntityType = isSupportedEntityType(activeEntityType)
+        ? activeEntityType
+        : null
     const normalizedTitleFilter = titleFilter.trim().toLocaleLowerCase()
     const items = useMemo(() => {
-        if (!sectionId) {
+        if (!sectionId || !supportedEntityType) {
             return []
         }
 
-        return getBlockItems(sectionId, activeEntityType)
-    }, [activeEntityType, getBlockItems, sectionId])
+        return getBlockItems(sectionId, supportedEntityType)
+    }, [getBlockItems, sectionId, supportedEntityType])
     const filteredItems = useMemo(() => {
-        if (activeEntityType !== 'titles' || !normalizedTitleFilter) {
+        if (supportedEntityType !== 'titles' || !normalizedTitleFilter) {
             return items
         }
 
@@ -40,14 +44,14 @@ export function EntityList() {
                 .toLocaleLowerCase()
                 .includes(normalizedTitleFilter)
         )
-    }, [activeEntityType, items, normalizedTitleFilter])
+    }, [items, normalizedTitleFilter, supportedEntityType])
 
     if (!sectionId) {
         return <EmptyState text="Nu exista sectiune activa." />
     }
 
     if (!filteredItems.length) {
-        if (activeEntityType === 'titles' && normalizedTitleFilter) {
+        if (supportedEntityType === 'titles' && normalizedTitleFilter) {
             return (
                 <EmptyState text="Nu exista titluri care contin sintagma cautata." />
             )
@@ -56,7 +60,7 @@ export function EntityList() {
         return <EmptyState text="Nu exista elemente in aceasta sectiune." />
     }
 
-    const showNr = activeEntityType === 'titles'
+    const showNr = supportedEntityType === 'titles'
 
     return (
         <div className="h-full min-h-0 overflow-y-auto">

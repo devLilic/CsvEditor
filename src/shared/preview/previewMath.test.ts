@@ -52,11 +52,21 @@ describe('previewMath - text scale', () => {
     })
 
     it('calculateTextScale shrinks text when it does not fit', () => {
-        expect(calculateTextScale({ textWidth: 1000, boxWidth: 500, minScaleX: 0.4 })).toBe(0.5)
+        expect(calculateTextScale({ textWidth: 1000, boxWidth: 500 })).toBe(0.5)
     })
 
-    it('calculateTextScale does not go below minScaleX', () => {
-        expect(calculateTextScale({ textWidth: 2000, boxWidth: 500, minScaleX: 0.4 })).toBe(0.4)
+    it('calculateTextScale keeps shrinking for very long text without a character-length floor', () => {
+        expect(calculateTextScale({ textWidth: 5000, boxWidth: 500 })).toBe(0.1)
+    })
+
+    it('calculateTextScale can reserve padding so scaled text does not touch the box edge', () => {
+        expect(
+            calculateTextScale({
+                textWidth: 1000,
+                boxWidth: 500,
+                fitPaddingPx: 8,
+            })
+        ).toBe(0.492)
     })
 })
 
