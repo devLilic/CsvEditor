@@ -93,7 +93,7 @@ export function EntityList() {
                             onClick={() =>
                                 select(sectionId, item.entityType, item.id)
                             }
-                            className={`px-3 py-2 cursor-pointer flex justify-between items-center gap-3 border-b border-l-4
+                            className={`group px-3 py-2 cursor-pointer flex justify-between items-center gap-3 border-b border-l-4
                                 ${
                                     selected
                                         ? 'bg-blue-100 border-l-blue-600'
@@ -171,7 +171,7 @@ export function EntityList() {
                                             e.stopPropagation()
                                             setOnAir(item.entityType, item.id)
                                         }}
-                                        className="rounded border border-red-500 px-2 py-1 text-xs text-red-500 hover:bg-red-700 hover:text-white"
+                                        className="rounded border border-red-500 px-2 py-1 text-xs text-red-500 opacity-0 transition-opacity duration-150 hover:bg-red-700 hover:text-white group-hover:opacity-100"
                                     >
                                         ON AIR
                                     </button>

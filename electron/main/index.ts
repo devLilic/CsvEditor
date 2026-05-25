@@ -61,6 +61,14 @@ function createAppMenu(window: BrowserWindow) {
         },
       ],
     },
+    {
+      label: 'Vizualizare',
+      submenu: [
+        { role: 'resetZoom', label: 'Resetare zoom' },
+        { role: 'zoomIn', label: 'Mărește zoom' },
+        { role: 'zoomOut', label: 'Micșorează zoom' },
+      ],
+    },
   ])
 
   Menu.setApplicationMenu(menu)
