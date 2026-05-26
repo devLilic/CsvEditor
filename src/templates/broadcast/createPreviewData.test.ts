@@ -15,6 +15,18 @@ describe('createPreviewData', () => {
         })
     })
 
+    it('maps phone call data for phoneCalls', () => {
+        expect(createPreviewData('phoneCalls', {
+            name: 'Ana Popescu',
+            occupation: 'Reporter',
+            image: 'WORK_PATH/ana_popescu.jpg',
+        })).toEqual({
+            name: 'Ana Popescu',
+            occupation: 'Reporter',
+            image: 'WORK_PATH/ana_popescu.jpg',
+        })
+    })
+
     it('maps location data for locations', () => {
         expect(createPreviewData('locations', { location: 'Chisinau' })).toEqual({
             location: 'Chisinau',
@@ -24,6 +36,7 @@ describe('createPreviewData', () => {
     it('fills missing supported fields with empty strings', () => {
         expect(createPreviewData('titles', {})).toEqual({ title: '' })
         expect(createPreviewData('persons', {})).toEqual({ name: '', occupation: '' })
+        expect(createPreviewData('phoneCalls', {})).toEqual({ name: '', occupation: '', image: '' })
         expect(createPreviewData('locations', {})).toEqual({ location: '' })
     })
 

@@ -15,10 +15,11 @@ describe('broadcastTemplates', () => {
         expect(broadcastTemplates.titles).toBeDefined()
         expect(broadcastTemplates.persons).toBeDefined()
         expect(broadcastTemplates.locations).toBeDefined()
+        expect(broadcastTemplates.phoneCalls).toBeDefined()
         expect(registry.hotTitles).toBeUndefined()
         expect(registry.waitTitles).toBeUndefined()
         expect(registry.waitLocations).toBeUndefined()
-        expect(Object.keys(broadcastTemplates)).toEqual(['titles', 'persons', 'locations'])
+        expect(Object.keys(broadcastTemplates)).toEqual(['titles', 'persons', 'locations', 'phoneCalls'])
     })
 
     it('each template has a valid minimal contract', () => {
@@ -90,5 +91,17 @@ describe('broadcastTemplates', () => {
         expect(locationLayer?.height).toBeGreaterThan(0)
         expect(template.id).not.toMatch(/hot|wait/i)
         expect(template.layers.map((layer) => layer.id).join(' ')).not.toMatch(/hot|wait/i)
+    })
+
+    it('exports a static phone call template with an image layer and 16:9 canvas', () => {
+        const template = broadcastTemplates.phoneCalls
+        const imageLayers = template.layers.filter((layer) => layer.type === 'image')
+
+        expect(template).toBeDefined()
+        expect(template.canvas.width).toBe(1920)
+        expect(template.canvas.height).toBe(1080)
+        expect(template.canvas.width / template.canvas.height).toBeCloseTo(16 / 9)
+        expect(imageLayers.length).toBeGreaterThanOrEqual(1)
+        expect(imageLayers.some((layer) => layer.x < template.canvas.width / 2)).toBe(true)
     })
 })

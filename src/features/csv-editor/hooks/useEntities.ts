@@ -179,7 +179,9 @@ export function useEntities() {
         sections,
         activeSectionId,
         activeSection,
-        activeEntityType: state.activeEntityType,
+        activeViewType: state.activeViewType,
+        // Legacy alias kept while UI consumers migrate to activeViewType.
+        activeEntityType: state.activeViewType,
         selected,
 
         // section ops

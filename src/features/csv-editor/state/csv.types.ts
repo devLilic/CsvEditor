@@ -1,6 +1,7 @@
 // src/features/csv-editor/state/csv.types.ts
 import type { EntitiesState, EntityType } from '../domain/entities'
 import type { SelectedEntity } from '../domain/csv.types'
+import type { EditorViewType } from '../domain/editorViewTypes'
 
 export type OnAirMap = Partial<Record<EntityType, string>>
 
@@ -11,8 +12,11 @@ export interface CsvState {
     // selection now needs sectionId
     selected: SelectedEntity | null
 
-    // active block type (titles/persons/...) for editor/list
-    activeEntityType: EntityType
+    // Canonical active UI view; phoneCalls maps to the CSV persons entity.
+    activeViewType: EditorViewType
+
+    // Legacy alias kept while UI consumers migrate to activeViewType.
+    activeEntityType: EditorViewType
 
     // active section for Tabs (BETA/INVITATI)
     activeSectionId: string | null
@@ -27,6 +31,7 @@ export const initialCsvState: CsvState = {
     },
     isLoaded: false,
     selected: null,
+    activeViewType: 'titles',
     activeEntityType: 'titles',
     activeSectionId: null,
     onAir: {},
@@ -50,7 +55,8 @@ export type CsvAction =
 
     // selection + active type
     | { type: 'SET_SELECTED'; payload: SelectedEntity | null }
-    | { type: 'SET_ACTIVE_ENTITY_TYPE'; payload: EntityType }
+    | { type: 'SET_ACTIVE_ENTITY_TYPE'; payload: EditorViewType }
+    | { type: 'SET_ACTIVE_VIEW_TYPE'; payload: EditorViewType }
 
     // ON AIR
     | { type: 'SET_ON_AIR'; payload: { type: EntityType; id: string } }

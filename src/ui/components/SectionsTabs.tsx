@@ -1,11 +1,11 @@
 // src/ui/components/SectionsTabs.tsx
 import { useMemo, useState } from 'react'
 import { useEntities, useSelectedEntity, useActiveEntityType } from '@/features/csv-editor'
-import type { CsvSection, EntityType } from '@/features/csv-editor'
+import type { CsvSection, EditorViewType } from '@/features/csv-editor'
 import { ConfirmDialog } from '@/ui/components/common/ConfirmDialog'
 import { TextPromptDialog } from '@/ui/components/common/TextPromptDialog'
 
-const DEFAULT_ENTITY: EntityType = 'titles'
+const DEFAULT_ENTITY: EditorViewType = 'titles'
 
 function isBeta(section: CsvSection) {
     return section.kind === 'beta'

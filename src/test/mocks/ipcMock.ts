@@ -15,6 +15,13 @@ export const ipcMock = {
     setAppConfig: vi.fn(),
     getDefaultProjectSettings: vi.fn(),
     setDefaultProjectSettings: vi.fn(),
+    getPhoneImageSettings: vi.fn(),
+    setPhoneImageSettings: vi.fn(),
+    selectWorkPath: vi.fn(),
+    saveFinalPhoneImage: vi.fn(),
+    loadPhoneImageDataUrl: vi.fn(),
+    listWorkPathImages: vi.fn(),
+    getPhoneImageDataUrl: vi.fn(),
 
     // App menu
     onMenuNavigate: vi.fn(() => vi.fn()),

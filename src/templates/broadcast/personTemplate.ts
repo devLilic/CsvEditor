@@ -1,4 +1,5 @@
 import type { BroadcastTemplate } from '@/shared/preview/templateContract'
+import bg from '@/assets/bg/OC_bg.png'
 
 export const personTemplate: BroadcastTemplate = {
     id: 'person',
@@ -8,7 +9,7 @@ export const personTemplate: BroadcastTemplate = {
         height: 1080,
         background: {
             type: 'image',
-            value: '/OC_bg.png',
+            value: bg,
             // value: '/background.png',
 
             objectFit: 'contain',

@@ -1,8 +1,8 @@
 // File: src/features/csv-editor/hooks/useActiveEntityType.ts
 import { useCallback } from 'react'
 import { useCsvContext } from '../context/CsvContext'
-import type { EntityType } from '../domain/entities'
-import { isSupportedEntityType } from '../domain/supportedEntityTypes'
+import type { EditorViewType } from '../domain/editorViewTypes'
+import { isEditorViewType } from '../domain/editorViewTypes'
 
 /**
  * Single source of truth pentru Tabs ↔ Lists ↔ Editor
@@ -10,22 +10,29 @@ import { isSupportedEntityType } from '../domain/supportedEntityTypes'
 export function useActiveEntityType() {
     const { state, dispatch } = useCsvContext()
 
-    const setActiveEntityType = useCallback(
-        (type: EntityType) => {
-            if (!isSupportedEntityType(type)) return
+    const setActiveViewType = useCallback(
+        (type: EditorViewType) => {
+            if (!isEditorViewType(type)) return
 
             dispatch({
-                type: 'SET_ACTIVE_ENTITY_TYPE',
+                type: 'SET_ACTIVE_VIEW_TYPE',
                 payload: type,
             })
         },
         [dispatch]
     )
 
-    return {
-        activeEntityType: isSupportedEntityType(state.activeEntityType)
+    const activeViewType = isEditorViewType(state.activeViewType)
+        ? state.activeViewType
+        : isEditorViewType(state.activeEntityType)
             ? state.activeEntityType
-            : 'titles',
-        setActiveEntityType,
+            : 'titles'
+
+    return {
+        activeViewType,
+        setActiveViewType,
+        // Legacy names kept while components migrate.
+        activeEntityType: activeViewType,
+        setActiveEntityType: setActiveViewType,
     }
 }

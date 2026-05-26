@@ -1,8 +1,9 @@
 // features/csv-editor/hooks/useCsvAutosave.ts
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { useCsvContext } from '../context/CsvContext'
 import { csvService } from '../services/csvService'
+import { phoneImageSettingsService } from '../services/phoneImageSettingsService'
 import { serializeCsv } from '../utils/csvSerializer'
 import type { EntitiesState } from '../domain/entities'
 
@@ -20,6 +21,30 @@ export function useCsvAutosave(options?: { debounceMs?: number }) {
     const isFirstRunRef = useRef(true)
     const debounceTimerRef = useRef<number | null>(null)
     const lastSerializedRef = useRef<string>('')
+    const phoneImageWorkPathRef = useRef('')
+    const [phoneImageWorkPath, setPhoneImageWorkPath] = useState('')
+
+    const serializeForDisk = useCallback(
+        (entities: EntitiesState) => serializeCsv(entities, {
+            phoneImageWorkPath: phoneImageWorkPathRef.current,
+        }),
+        [phoneImageWorkPath]
+    )
+
+    useEffect(() => {
+        let isMounted = true
+
+        phoneImageSettingsService.getPhoneImageSettings().then((settings) => {
+            if (isMounted) {
+                phoneImageWorkPathRef.current = settings.workPath
+                setPhoneImageWorkPath(settings.workPath)
+            }
+        })
+
+        return () => {
+            isMounted = false
+        }
+    }, [])
 
     // ---- AUTOSAVE ----
     useEffect(() => {
@@ -28,7 +53,7 @@ export function useCsvAutosave(options?: { debounceMs?: number }) {
         // Evită autosave imediat după CSV_LOADED
         if (isFirstRunRef.current) {
             isFirstRunRef.current = false
-            lastSerializedRef.current = serializeCsv(state.entities)
+            lastSerializedRef.current = serializeForDisk(state.entities)
             return
         }
 
@@ -38,7 +63,7 @@ export function useCsvAutosave(options?: { debounceMs?: number }) {
         }
 
         debounceTimerRef.current = window.setTimeout(async () => {
-            const csv = serializeCsv(state.entities)
+            const csv = serializeForDisk(state.entities)
 
             // evită write dacă nu s-a schimbat nimic real
             if (csv === lastSerializedRef.current) return
@@ -57,7 +82,7 @@ export function useCsvAutosave(options?: { debounceMs?: number }) {
                 debounceTimerRef.current = null
             }
         }
-    }, [state.entities, state.isLoaded, debounceMs])
+    }, [state.entities, state.isLoaded, debounceMs, serializeForDisk])
 
     // ---- OPERAȚII DESTRUCTIVE SIGURE ----
 
@@ -69,7 +94,7 @@ export function useCsvAutosave(options?: { debounceMs?: number }) {
      */
     const clearAllSafely = useCallback(
         async (nextEmptyEntities: EntitiesState) => {
-            const currentCsv = serializeCsv(state.entities)
+            const currentCsv = serializeForDisk(state.entities)
 
             // 1️⃣ backup
             const backupRes = await csvService.backup(currentCsv)
@@ -86,7 +111,7 @@ export function useCsvAutosave(options?: { debounceMs?: number }) {
             })
 
             // 3️⃣ scriere CSV gol
-            const emptyCsv = serializeCsv(nextEmptyEntities)
+            const emptyCsv = serializeForDisk(nextEmptyEntities)
             const writeRes = await csvService.write(emptyCsv)
             if (!writeRes.ok) {
                 console.error('Failed to write empty CSV:', writeRes.error)
@@ -94,7 +119,7 @@ export function useCsvAutosave(options?: { debounceMs?: number }) {
 
             lastSerializedRef.current = emptyCsv
         },
-        [dispatch, state.entities]
+        [dispatch, serializeForDisk, state.entities]
     )
 
     return {

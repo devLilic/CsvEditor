@@ -1,13 +1,72 @@
+import { useEffect, useMemo, useState } from 'react'
+import { phoneImageService } from '@/features/csv-editor/services/phoneImageService'
+import {
+    isWorkPathResolvableImageRef,
+    resolveWorkPathImageRef,
+} from '@/features/csv-editor/domain/phoneImagePath'
 import type { BroadcastImageLayer } from '@/shared/preview/templateContract'
 
 type ImageLayerRendererProps = {
     layer: BroadcastImageLayer
+    data?: Record<string, unknown>
+    sampleData?: Record<string, unknown>
 }
 
-export function ImageLayerRenderer({ layer }: ImageLayerRendererProps) {
-    const objectFit = layer.objectFit ?? 'contain'
+function valueFromDataToken(
+    src: string,
+    data?: Record<string, unknown>,
+    sampleData?: Record<string, unknown>
+): string {
+    const match = src.match(/^\{([^}]+)\}$/)
+    if (!match) return src
 
-    if (!layer.src.trim()) {
+    const fieldId = match[1]
+    const value = data?.[fieldId] ?? sampleData?.[fieldId]
+
+    return typeof value === 'string' ? value : ''
+}
+
+export function resolveImageLayerSrc(
+    src: string,
+    workPath: string
+): string {
+    return resolveWorkPathImageRef(src, workPath)
+}
+
+export function ImageLayerRenderer({ layer, data, sampleData }: ImageLayerRendererProps) {
+    const objectFit = layer.objectFit ?? 'contain'
+    const rawSrc = useMemo(
+        () => valueFromDataToken(layer.src, data, sampleData),
+        [data, layer.src, sampleData]
+    )
+    const [resolvedSrc, setResolvedSrc] = useState(() => resolveImageLayerSrc(rawSrc, ''))
+
+    useEffect(() => {
+        let isMounted = true
+
+        if (!isWorkPathResolvableImageRef(rawSrc)) {
+            setResolvedSrc(rawSrc)
+            return
+        }
+
+        phoneImageService.loadPhoneImageDataUrl({ imageRef: rawSrc })
+            .then((response) => {
+                if (isMounted) {
+                    setResolvedSrc(response.ok ? response.dataUrl ?? '' : '')
+                }
+            })
+            .catch(() => {
+                if (isMounted) {
+                    setResolvedSrc('')
+                }
+            })
+
+        return () => {
+            isMounted = false
+        }
+    }, [rawSrc])
+
+    if (!resolvedSrc.trim()) {
         return (
             <div
                 data-layer-id={layer.id}
@@ -30,7 +89,7 @@ export function ImageLayerRenderer({ layer }: ImageLayerRendererProps) {
     return (
         <img
             data-layer-id={layer.id}
-            src={layer.src}
+            src={resolvedSrc}
             alt=""
             style={{
                 position: 'absolute',

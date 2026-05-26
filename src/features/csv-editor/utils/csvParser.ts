@@ -11,6 +11,7 @@ export const CSV_COLUMNS = {
 
     PERSON_NAME: 'Nume',
     PERSON_OCCUPATION: 'Functie',
+    IMAGE: 'Image',
 
     LOCATION: 'Locatie',
     HOT_TITLE: 'Ultima Ora',
@@ -40,6 +41,7 @@ function buildRowFromCsv(row: CsvRowRaw): Omit<SectionRow, 'id'> | null {
     const titleText = cell(row, CSV_COLUMNS.TITLE)
     const name = cell(row, CSV_COLUMNS.PERSON_NAME)
     const occupation = cell(row, CSV_COLUMNS.PERSON_OCCUPATION)
+    const image = cell(row, CSV_COLUMNS.IMAGE)
     const loc = cell(row, CSV_COLUMNS.LOCATION)
 
     // empty row inside a section -> ignore (no delimiter concept anymore)
@@ -59,8 +61,11 @@ function buildRowFromCsv(row: CsvRowRaw): Omit<SectionRow, 'id'> | null {
         out.title = t
     }
 
-    if (name !== '' || occupation !== '') {
+    if (name !== '' || occupation !== '' || image !== '') {
         const p: Person = { id: uuidv4(), name, occupation }
+        if (image !== '') {
+            p.image = image
+        }
         out.person = p
     }
 

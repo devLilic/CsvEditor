@@ -4,6 +4,7 @@ import { broadcastTemplates } from './templates'
 import { titleTemplate } from './titleTemplate'
 import { personTemplate } from './personTemplate'
 import { locationTemplate } from './locationTemplate'
+import { phoneCallTemplate } from './phoneCallTemplate'
 
 describe('getTemplateForEntityType', () => {
     const registry = broadcastTemplates as Record<string, unknown>
@@ -18,6 +19,10 @@ describe('getTemplateForEntityType', () => {
 
     it('maps locations to locationTemplate', () => {
         expect(getTemplateForEntityType('locations')).toBe(locationTemplate)
+    })
+
+    it('maps phoneCalls to phoneCallTemplate', () => {
+        expect(getTemplateForEntityType('phoneCalls')).toBe(phoneCallTemplate)
     })
 
     it('does not expose dedicated hot or wait templates', () => {

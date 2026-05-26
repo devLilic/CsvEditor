@@ -15,6 +15,8 @@ vi.mock('@/features/csv-editor', async (importOriginal) => {
     return {
         ...actual,
         useActiveEntityType: () => ({
+            activeViewType: csvHooks.activeEntityType,
+            setActiveViewType: csvHooks.setActiveEntityType,
             activeEntityType: csvHooks.activeEntityType,
             setActiveEntityType: csvHooks.setActiveEntityType,
         }),
@@ -35,16 +37,36 @@ afterEach(() => {
 })
 
 describe('EntityTypeTabsLeft', () => {
-    it('renders only the supported entity type tabs', () => {
+    it('renders Titluri tab', () => {
         render(<EntityTypeTabsLeft />)
 
         expect(screen.getByRole('button', { name: 'Titluri' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Persoane' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Locații' })).toBeInTheDocument()
+    })
 
-        expect(screen.queryByRole('button', { name: 'Ultima oră' })).not.toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: 'Titluri așteptare' })).not.toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: 'Locații așteptare' })).not.toBeInTheDocument()
+    it('renders Persoane tab', () => {
+        render(<EntityTypeTabsLeft />)
+
+        expect(screen.getByRole('button', { name: 'Persoane' })).toBeInTheDocument()
+    })
+
+    it('renders Locatii tab', () => {
+        render(<EntityTypeTabsLeft />)
+
+        expect(screen.getByRole('button', { name: /Loca/ })).toBeInTheDocument()
+    })
+
+    it('renders Apeluri telefonice tab', () => {
+        render(<EntityTypeTabsLeft />)
+
+        expect(screen.getByRole('button', { name: 'Apeluri telefonice' })).toBeInTheDocument()
+    })
+
+    it('does not render legacy tabs', () => {
+        render(<EntityTypeTabsLeft />)
+
+        expect(screen.queryByRole('button', { name: /Ultima/ })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /Titluri.*teptare/ })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /Loca.*teptare/ })).not.toBeInTheDocument()
     })
 
     it('clears selection and changes active type when switching tabs', async () => {
@@ -55,6 +77,16 @@ describe('EntityTypeTabsLeft', () => {
 
         expect(csvHooks.clearSelection).toHaveBeenCalledTimes(1)
         expect(csvHooks.setActiveEntityType).toHaveBeenCalledWith('persons')
+    })
+
+    it('clears selection and changes active type when switching to phone calls', async () => {
+        const user = userEvent.setup()
+        render(<EntityTypeTabsLeft />)
+
+        await user.click(screen.getByRole('button', { name: 'Apeluri telefonice' }))
+
+        expect(csvHooks.clearSelection).toHaveBeenCalledTimes(1)
+        expect(csvHooks.setActiveEntityType).toHaveBeenCalledWith('phoneCalls')
     })
 
     it('does not clear selection when clicking the already active tab', async () => {

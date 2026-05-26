@@ -3,6 +3,11 @@ import Papa from 'papaparse'
 import type { EntitiesState, CsvSection, SectionRow } from '../domain/entities'
 import { CSV_COLUMNS } from './csvParser'
 import { buildBetaMarker } from '../domain/csv.schema'
+import { resolveWorkPathImageCsvValue } from '../domain/phoneImagePath'
+
+export type SerializeCsvOptions = {
+    phoneImageWorkPath?: string
+}
 
 function emptyCsvRow(): Record<string, string> {
     return {
@@ -10,6 +15,7 @@ function emptyCsvRow(): Record<string, string> {
         [CSV_COLUMNS.TITLE]: '',
         [CSV_COLUMNS.PERSON_NAME]: '',
         [CSV_COLUMNS.PERSON_OCCUPATION]: '',
+        [CSV_COLUMNS.IMAGE]: '',
         [CSV_COLUMNS.LOCATION]: '',
         [CSV_COLUMNS.HOT_TITLE]: '',
         [CSV_COLUMNS.WAIT_TITLE]: '',
@@ -17,7 +23,7 @@ function emptyCsvRow(): Record<string, string> {
     }
 }
 
-function packSectionRows(section: CsvSection): Record<string, string>[] {
+function packSectionRows(section: CsvSection, options: SerializeCsvOptions): Record<string, string>[] {
     const out: Record<string, string>[] = []
 
     // 1) marker row
@@ -49,6 +55,9 @@ function packSectionRows(section: CsvSection): Record<string, string>[] {
 
             [CSV_COLUMNS.PERSON_NAME]: r.person?.name ?? '',
             [CSV_COLUMNS.PERSON_OCCUPATION]: r.person?.occupation ?? '',
+            [CSV_COLUMNS.IMAGE]: r.person?.image
+                ? resolveWorkPathImageCsvValue(r.person.image, options.phoneImageWorkPath ?? '')
+                : '',
 
             [CSV_COLUMNS.LOCATION]: r.location?.location ?? '',
             [CSV_COLUMNS.HOT_TITLE]: '',
@@ -72,7 +81,7 @@ function packSectionRows(section: CsvSection): Record<string, string>[] {
  * - Nr filled only for non-empty Titlu rows (not markers)
  * - packing is based on section.rows order
  */
-export function serializeCsv(state: EntitiesState): string {
+export function serializeCsv(state: EntitiesState, options: SerializeCsvOptions = {}): string {
     const rows: Record<string, string>[] = []
 
     // Ensure INVITATI last (defensive)
@@ -82,7 +91,7 @@ export function serializeCsv(state: EntitiesState): string {
     const ordered = invited ? [...betas, invited] : [...betas]
 
     for (const s of ordered) {
-        rows.push(...packSectionRows(s))
+        rows.push(...packSectionRows(s, options))
     }
 
     return Papa.unparse(rows, { delimiter: ';' })

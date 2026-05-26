@@ -1,8 +1,9 @@
 // electron/main/settings-handlers.ts
-import { ipcMain } from 'electron'
+import { dialog, ipcMain } from 'electron'
 import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
 import type { AppConfig } from '../../src/shared/ipc-types'
 import { isDefaultProjectSettings } from '../../src/features/csv-editor/domain/defaultProjectSettings'
+import { normalizePhoneImageSettings } from '../../src/features/csv-editor/domain/phoneImageSettings'
 import {
     getQuickTitles,
     setQuickTitles,
@@ -10,6 +11,8 @@ import {
     setAppConfig,
     getDefaultProjectSettings,
     setDefaultProjectSettings,
+    getPhoneImageSettings,
+    setPhoneImageSettings,
 } from '../store'
 
 function isStringArray(value: unknown): value is string[] {
@@ -84,6 +87,41 @@ export function registerSettingsHandlers() {
         } catch (error) {
             console.error('[settings:set-default-project] failed:', error)
             return getDefaultProjectSettings()
+        }
+    })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_GET_PHONE_IMAGE, () => {
+        try {
+            return getPhoneImageSettings()
+        } catch (error) {
+            console.error('[settings:get-phone-image] failed:', error)
+            return getPhoneImageSettings()
+        }
+    })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_SET_PHONE_IMAGE, (_event, settings: unknown) => {
+        try {
+            return setPhoneImageSettings(normalizePhoneImageSettings(settings))
+        } catch (error) {
+            console.error('[settings:set-phone-image] failed:', error)
+            return getPhoneImageSettings()
+        }
+    })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_SELECT_WORK_PATH, async () => {
+        try {
+            const result = await dialog.showOpenDialog({
+                properties: ['openDirectory'],
+            })
+
+            if (result.canceled) {
+                return null
+            }
+
+            return result.filePaths[0] ?? null
+        } catch (error) {
+            console.error('[settings:select-work-path] failed:', error)
+            return null
         }
     })
 }

@@ -4,6 +4,21 @@ import type { CsvState, CsvAction } from './csv.types'
 import { EntityTypes } from '../domain/entities'
 import type { CsvSection, SectionRow, Person, SimpleTitle, Location, EntityType } from '../domain/entities'
 import { createBetaSection, createInvitedSection } from '../domain/entities'
+import { isEditorViewType } from '../domain/editorViewTypes'
+
+function getActiveViewType(state: CsvState) {
+    return isEditorViewType(state.activeViewType)
+        ? state.activeViewType
+        : state.activeEntityType
+}
+
+function withActiveViewType(state: CsvState, activeViewType: CsvState['activeViewType']): CsvState {
+    return {
+        ...state,
+        activeViewType,
+        activeEntityType: activeViewType,
+    }
+}
 
 function isInvited(section: CsvSection) {
     return section.kind === 'invited'
@@ -57,6 +72,9 @@ function makeEntity(entityType: EntityType, data: Record<string, unknown>) {
             id: uuidv4(),
             name: String((data as any).name ?? ''),
             occupation: String((data as any).occupation ?? ''),
+            image: typeof (data as any).image === 'string' && (data as any).image.trim() !== ''
+                ? String((data as any).image)
+                : undefined,
         } satisfies Person
     }
 
@@ -118,7 +136,13 @@ function addRowWithEntity(section: CsvSection, entityType: EntityType, data: Rec
         case EntityTypes.PERSONS: {
             const name = String((data as any).name ?? '')
             const occupation = String((data as any).occupation ?? '')
-            row.person = { id: uuidv4(), name, occupation }
+            const image = String((data as any).image ?? '').trim()
+            row.person = {
+                id: uuidv4(),
+                name,
+                occupation,
+                ...(image ? { image } : {}),
+            }
             break
         }
         case EntityTypes.LOCATIONS: {
@@ -161,6 +185,9 @@ function updateEntityInSection(section: CsvSection, entityType: EntityType, id: 
                 ...r.person,
                 name: String((data as any).name ?? r.person.name),
                 occupation: String((data as any).occupation ?? r.person.occupation),
+                image: typeof (data as any).image === 'string'
+                    ? ((data as any).image.trim() ? String((data as any).image) : undefined)
+                    : r.person.image,
             }
             return { ...r, person: next }
         }
@@ -333,7 +360,8 @@ export function csvReducer(state: CsvState, action: CsvAction): CsvState {
                 ...state,
                 entities: { ...state.entities, sections: nextSections },
                 activeSectionId: sectionId,
-                activeEntityType: entityType,
+                activeViewType: getActiveViewType(state),
+                activeEntityType: getActiveViewType(state),
             }
         }
 
@@ -381,13 +409,13 @@ export function csvReducer(state: CsvState, action: CsvAction): CsvState {
 
         // ---------------- Active/Selected ----------------
         case 'SET_ACTIVE_ENTITY_TYPE':
-            return { ...state, activeEntityType: action.payload }
+        case 'SET_ACTIVE_VIEW_TYPE':
+            return withActiveViewType(state, action.payload)
 
         case 'SET_SELECTED':
             return {
                 ...state,
                 selected: action.payload,
-                activeEntityType: action.payload?.entityType ?? state.activeEntityType,
                 activeSectionId: action.payload?.sectionId ?? state.activeSectionId,
             }
 

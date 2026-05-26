@@ -1,26 +1,42 @@
 // src/ui/components/EntityEditor.tsx
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { useEntities, useSelectedEntity, useActiveEntityType } from '@/features/csv-editor'
+import {
+    FALLBACK_PHONE_IMAGE_SETTINGS,
+    buildSuggestedPhoneImageFilename,
+    getPhoneImageDisplayFilename,
+    type PhoneImageSettings,
+    getCsvEntityTypeForEditorView,
+    useEntities,
+    useSelectedEntity,
+    useActiveEntityType,
+} from '@/features/csv-editor'
+import { phoneImageSettingsService } from '@/features/csv-editor/services/phoneImageSettingsService'
 import { createPreviewData, getTemplateForEntityType } from '@/templates/broadcast'
 import { Preview16x9 } from './Preview16x9'
 import { QuickTitlesBar } from './QuickTitlesBar'
 import { InputField } from './common/InputField'
+import { PhoneImageModal } from './phone-image/PhoneImageModal'
 
 type FormState = {
     title?: string
     name?: string
     occupation?: string
     location?: string
+    image?: string
 }
 
 export function EntityEditor() {
     const { activeSectionId, activeSection, getBlockItems, addEntity, updateEntity } = useEntities()
 
     const { selected, clearSelection } = useSelectedEntity()
-    const { activeEntityType } = useActiveEntityType()
+    const { activeViewType } = useActiveEntityType()
+    const editorEntityType = getCsvEntityTypeForEditorView(activeViewType)
 
     const [showInvalid, setShowInvalid] = useState(false)
     const [form, setForm] = useState<FormState>({})
+    const [phoneImageSettings, setPhoneImageSettings] = useState<PhoneImageSettings>(FALLBACK_PHONE_IMAGE_SETTINGS)
+    const [phoneImageError, setPhoneImageError] = useState<string | null>(null)
+    const [phoneImageModalOpen, setPhoneImageModalOpen] = useState(false)
 
     // refs focus
     const titleRef = useRef<HTMLInputElement>(null)
@@ -40,12 +56,26 @@ export function EntityEditor() {
         return selectedItems.find((x: any) => x.id === selected.id) ?? null
     }, [selectedItems, selected?.id])
 
+    useEffect(() => {
+        let isMounted = true
+
+        phoneImageSettingsService.getPhoneImageSettings().then((settings) => {
+            if (isMounted) {
+                setPhoneImageSettings(settings)
+            }
+        })
+
+        return () => {
+            isMounted = false
+        }
+    }, [])
+
     // ---- helpers ----
     const focusPrimaryInput = useCallback(() => {
         let el: HTMLInputElement | null = null
 
-        if (activeEntityType === 'persons') el = nameRef.current
-        else if (activeEntityType === 'locations') el = locationRef.current
+        if (editorEntityType === 'persons') el = nameRef.current
+        else if (editorEntityType === 'locations') el = locationRef.current
         else el = titleRef.current
 
         if (!el) return
@@ -56,7 +86,7 @@ export function EntityEditor() {
         } catch {
             // ignore (some inputs might not support selection range)
         }
-    }, [activeEntityType])
+    }, [editorEntityType])
 
     const focusTitleInput = useCallback(() => {
         const el = titleRef.current
@@ -84,7 +114,9 @@ export function EntityEditor() {
                 setForm({
                     name: data?.name ?? '',
                     occupation: data?.occupation ?? '',
+                    image: data?.image ?? '',
                 })
+                setPhoneImageError(null)
                 break
 
             case 'locations':
@@ -103,7 +135,7 @@ export function EntityEditor() {
     // ✅ autofocus whenever context changes (tab, selection, section)
     useEffect(() => {
         focusPrimaryInput()
-    }, [focusPrimaryInput, activeEntityType, selected?.id, selected?.sectionId])
+    }, [focusPrimaryInput, activeViewType, selected?.id, selected?.sectionId])
 
     // ✅ ESC clears selection + resets editor
     useEffect(() => {
@@ -114,7 +146,7 @@ export function EntityEditor() {
             e.preventDefault()
             clearSelection()
             setForm({})
-            // keep same activeEntityType, but return to create mode
+            // keep same activeViewType, but return to create mode
             requestAnimationFrame(() => focusPrimaryInput())
         }
 
@@ -137,9 +169,12 @@ export function EntityEditor() {
     }
 
     const isFormValid = (): boolean => {
-        switch (activeEntityType) {
+        switch (activeViewType) {
             case 'persons':
                 return Boolean(form.name?.trim())
+
+            case 'phoneCalls':
+                return Boolean(form.name?.trim() && form.image?.trim())
 
             case 'locations':
                 return Boolean(form.location?.trim())
@@ -164,7 +199,7 @@ export function EntityEditor() {
             clearSelection()
         } else {
             // create mode: use active section + active entity type
-            addEntity(sectionId, activeEntityType, payload)
+            addEntity(sectionId, editorEntityType, payload)
         }
 
         setForm({})
@@ -183,8 +218,11 @@ export function EntityEditor() {
         requestAnimationFrame(() => focusTitleInput())
     }
 
-    const previewTemplate = getTemplateForEntityType(activeEntityType)
-    const previewData = createPreviewData(activeEntityType, form)
+    const previewTemplate = getTemplateForEntityType(activeViewType)
+    const previewData = createPreviewData(activeViewType, form)
+    const phoneImageFilename = form.image
+        ? getPhoneImageDisplayFilename(form.image) || form.image
+        : ''
 
     return (
         <div className="bg-white rounded border p-4 flex flex-col gap-4 min-h-0 min-w-0 max-w-full overflow-hidden">
@@ -203,7 +241,7 @@ export function EntityEditor() {
 
             {/* inputs */}
             <div className="flex flex-col gap-3 w-full font-bold shrink-0">
-                {activeEntityType === 'persons' && (
+                {editorEntityType === 'persons' && (
                     <>
                         <InputField
                             label="Nume"
@@ -222,10 +260,52 @@ export function EntityEditor() {
                             onChange={(v) => updateField('occupation', v)}
                             onEnter={saveEntity}
                         />
+
+                        {activeViewType === 'phoneCalls' && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => setPhoneImageModalOpen(true)}
+                                    className="rounded border border-blue-500 bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
+                                >
+                                    {form.image ? 'Change Photo' : 'Add Photo'}
+                                </button>
+
+                                {form.image && (
+                                    <div className="rounded border border-green-200 bg-green-50 px-3 py-2 text-sm font-medium text-green-800">
+                                        Poză adăugată: {phoneImageFilename}
+                                    </div>
+                                )}
+
+                                {phoneImageError && (
+                                    <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                                        {phoneImageError}
+                                    </div>
+                                )}
+
+                                {form.name?.trim() && !form.image?.trim() && !phoneImageError && (
+                                    <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+                                        Adaugă o poză înainte de salvare.
+                                    </div>
+                                )}
+
+                                <PhoneImageModal
+                                    open={phoneImageModalOpen}
+                                    settings={phoneImageSettings}
+                                    initialFilename={form.image?.replace(/^WORK_PATH\//, '')}
+                                    suggestedFilename={buildSuggestedPhoneImageFilename(form.name ?? '')}
+                                    onClose={() => setPhoneImageModalOpen(false)}
+                                    onSaved={(imageCsvValue) => {
+                                        setPhoneImageError(null)
+                                        updateField('image', imageCsvValue)
+                                    }}
+                                />
+                            </>
+                        )}
                     </>
                 )}
 
-                {activeEntityType === 'locations' && (
+                {editorEntityType === 'locations' && (
                     <InputField
                         label="Locație"
                         value={form.location ?? ''}
@@ -237,7 +317,7 @@ export function EntityEditor() {
                     />
                 )}
 
-                {activeEntityType === 'titles' && (
+                {editorEntityType === 'titles' && (
                     <InputField
                         label="Titlu"
                         value={form.title ?? ''}
@@ -260,7 +340,7 @@ export function EntityEditor() {
             </button>
 
             {/* QuickTitles doar la TITLES */}
-            {activeEntityType === 'titles' && (
+            {editorEntityType === 'titles' && (
                 <div className="border-t pt-3 mt-2 shrink-0">
                     <div className="text-xs text-gray-500 mb-2">Prefixe rapide</div>
                     <QuickTitlesBar onApplyPrefix={applyQuickTitle} focusEditor={focusTitleInput} />

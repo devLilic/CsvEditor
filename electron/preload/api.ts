@@ -45,6 +45,34 @@ export const electronApi: RendererApi = {
         return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SET_DEFAULT_PROJECT, settings)
     },
 
+    getPhoneImageSettings() {
+        return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET_PHONE_IMAGE)
+    },
+
+    setPhoneImageSettings(settings) {
+        return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SET_PHONE_IMAGE, settings)
+    },
+
+    selectWorkPath() {
+        return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SELECT_WORK_PATH)
+    },
+
+    saveFinalPhoneImage(request) {
+        return ipcRenderer.invoke(IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL, request)
+    },
+
+    loadPhoneImageDataUrl(request) {
+        return ipcRenderer.invoke(IPC_CHANNELS.PHONE_IMAGE_LOAD_DATA_URL, request)
+    },
+
+    listWorkPathImages() {
+        return ipcRenderer.invoke(IPC_CHANNELS.PHONE_IMAGE_LIST_WORK_PATH_IMAGES)
+    },
+
+    getPhoneImageDataUrl(request) {
+        return ipcRenderer.invoke(IPC_CHANNELS.PHONE_IMAGE_GET_IMAGE_DATA_URL, request)
+    },
+
     onMenuNavigate(callback) {
         const listener = (_event: IpcRendererEvent, route: unknown) => {
             if (typeof route === 'string') {

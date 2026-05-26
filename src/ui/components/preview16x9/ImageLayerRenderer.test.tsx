@@ -1,7 +1,14 @@
-import { render } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { render, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BroadcastImageLayer } from '@/shared/preview/templateContract'
 import { ImageLayerRenderer } from './ImageLayerRenderer'
+import { phoneImageService } from '@/features/csv-editor/services/phoneImageService'
+
+vi.mock('@/features/csv-editor/services/phoneImageService', () => ({
+    phoneImageService: {
+        loadPhoneImageDataUrl: vi.fn(),
+    },
+}))
 
 const baseLayer: BroadcastImageLayer = {
     id: 'image-1',
@@ -15,6 +22,13 @@ const baseLayer: BroadcastImageLayer = {
 }
 
 describe('ImageLayerRenderer', () => {
+    beforeEach(() => {
+        vi.mocked(phoneImageService.loadPhoneImageDataUrl).mockResolvedValue({
+            ok: false,
+            error: 'not found',
+        })
+    })
+
     it('renders an image inside the design box with default contain objectFit', () => {
         const { container } = render(<ImageLayerRenderer layer={baseLayer} />)
         const image = container.querySelector('img')
@@ -62,5 +76,81 @@ describe('ImageLayerRenderer', () => {
             width: '320px',
             height: '180px',
         })
+    })
+
+    it('resolves WORK_PATH token using phone image data loader', async () => {
+        vi.mocked(phoneImageService.loadPhoneImageDataUrl).mockResolvedValueOnce({
+            ok: true,
+            dataUrl: 'data:image/jpeg;base64,abc123',
+        })
+
+        const { container } = render(
+            <ImageLayerRenderer layer={{ ...baseLayer, src: 'WORK_PATH/ion.jpg' }} />
+        )
+
+        await waitFor(() => {
+            expect(phoneImageService.loadPhoneImageDataUrl).toHaveBeenCalledWith({
+                imageRef: 'WORK_PATH/ion.jpg',
+            })
+            expect(container.querySelector('img')).toHaveAttribute('src', 'data:image/jpeg;base64,abc123')
+        })
+    })
+
+    it('uses image value from preview data and resolves WORK_PATH', async () => {
+        vi.mocked(phoneImageService.loadPhoneImageDataUrl).mockResolvedValueOnce({
+            ok: true,
+            dataUrl: 'data:image/jpeg;base64,workpath',
+        })
+
+        const { container } = render(
+            <ImageLayerRenderer
+                layer={{ ...baseLayer, src: '{image}' }}
+                data={{ image: 'WORK_PATH/ion.jpg' }}
+            />
+        )
+
+        await waitFor(() => {
+            expect(phoneImageService.loadPhoneImageDataUrl).toHaveBeenCalledWith({
+                imageRef: 'WORK_PATH/ion.jpg',
+            })
+            expect(container.querySelector('img')).toHaveAttribute('src', 'data:image/jpeg;base64,workpath')
+        })
+    })
+
+    it('uses image filename from preview data and resolves it through the phone image data loader', async () => {
+        vi.mocked(phoneImageService.loadPhoneImageDataUrl).mockResolvedValueOnce({
+            ok: true,
+            dataUrl: 'data:image/jpeg;base64,andrei',
+        })
+
+        const { container } = render(
+            <ImageLayerRenderer
+                layer={{ ...baseLayer, src: '{image}' }}
+                data={{ image: 'andrei_curararu.jpg' }}
+            />
+        )
+
+        await waitFor(() => {
+            expect(phoneImageService.loadPhoneImageDataUrl).toHaveBeenCalledWith({
+                imageRef: 'andrei_curararu.jpg',
+            })
+            expect(container.querySelector('img')).toHaveAttribute('src', 'data:image/jpeg;base64,andrei')
+        })
+    })
+
+    it('renders placeholder when phone image data loader fails', async () => {
+        vi.mocked(phoneImageService.loadPhoneImageDataUrl).mockResolvedValueOnce({
+            ok: false,
+            error: 'not found',
+        })
+
+        const { container } = render(
+            <ImageLayerRenderer layer={{ ...baseLayer, src: 'WORK_PATH/ion.jpg' }} />
+        )
+
+        await waitFor(() => {
+            expect(container.querySelector('[data-empty-image-layer="true"]')).toBeInTheDocument()
+        })
+        expect(container.querySelector('img')).toBeNull()
     })
 })

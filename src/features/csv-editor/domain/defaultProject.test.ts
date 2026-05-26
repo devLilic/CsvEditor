@@ -118,4 +118,26 @@ describe('createDefaultProjectEntities', () => {
 
         expect(project.sections[0].rows[0].title).toBeUndefined()
     })
+
+    it('does not create a location entity when provided settings have an empty location', () => {
+        const project = createDefaultProjectEntities({
+            title: '',
+            personName: 'CUSTOM NAME',
+            personOccupation: 'CUSTOM OCCUPATION',
+            location: '',
+        })
+
+        expect(project.sections[0].rows[0].location).toBeUndefined()
+    })
+
+    it('does not create a location entity when provided settings location has only spaces', () => {
+        const project = createDefaultProjectEntities({
+            title: '',
+            personName: 'CUSTOM NAME',
+            personOccupation: 'CUSTOM OCCUPATION',
+            location: '   ',
+        })
+
+        expect(project.sections[0].rows[0].location).toBeUndefined()
+    })
 })

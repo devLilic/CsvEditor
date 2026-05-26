@@ -3,6 +3,7 @@ type PreviewSourceData = {
     name?: string
     occupation?: string
     location?: string
+    image?: string
 }
 
 export function createPreviewData(
@@ -17,6 +18,14 @@ export function createPreviewData(
         return {
             name: data.name ?? '',
             occupation: data.occupation ?? '',
+        }
+    }
+
+    if (entityType === 'phoneCalls') {
+        return {
+            name: data.name ?? '',
+            occupation: data.occupation ?? '',
+            image: data.image ?? '',
         }
     }
 

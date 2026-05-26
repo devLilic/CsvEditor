@@ -19,6 +19,11 @@ export interface BaseEntity {
 export interface Person extends BaseEntity {
     name: string
     occupation: string
+    /**
+     * Persons with an image are shown in the phoneCalls editor view.
+     * This is still the CSV Image field, not a separate entity/type column.
+     */
+    image?: string
 }
 
 export interface SimpleTitle extends BaseEntity {

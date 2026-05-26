@@ -20,7 +20,7 @@ export function LayerRenderer({ layer, data, sampleData }: LayerRendererProps) {
         case 'text':
             return <layerRenderers.text layer={layer} data={data} sampleData={sampleData} />
         case 'image':
-            return <layerRenderers.image layer={layer} />
+            return <layerRenderers.image layer={layer} data={data} sampleData={sampleData} />
         case 'shape':
             return <layerRenderers.shape layer={layer} />
         default:

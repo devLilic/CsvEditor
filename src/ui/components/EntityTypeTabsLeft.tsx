@@ -1,21 +1,22 @@
 // src/ui/components/EntityTypeTabsLeft.tsx
-import type { SupportedEntityType } from '@/features/csv-editor'
+import type { EditorViewType } from '@/features/csv-editor'
 import { useActiveEntityType, useSelectedEntity } from '@/features/csv-editor'
 
-const SUPPORTED_TABS: { type: SupportedEntityType; label: string }[] = [
+const SUPPORTED_TABS: { type: EditorViewType; label: string }[] = [
     { type: 'titles', label: 'Titluri' },
     { type: 'persons', label: 'Persoane' },
     { type: 'locations', label: 'Locații' },
+    { type: 'phoneCalls', label: 'Apeluri telefonice' },
 ]
 
 export function EntityTypeTabsLeft() {
-    const { activeEntityType, setActiveEntityType } = useActiveEntityType()
+    const { activeViewType, setActiveViewType } = useActiveEntityType()
     const { clearSelection } = useSelectedEntity()
 
-    const handleChange = (type: SupportedEntityType) => {
-        if (type === activeEntityType) return
+    const handleChange = (type: EditorViewType) => {
+        if (type === activeViewType) return
         clearSelection()
-        setActiveEntityType(type)
+        setActiveViewType(type)
     }
 
     return (
@@ -25,7 +26,7 @@ export function EntityTypeTabsLeft() {
                     key={t.type}
                     onClick={() => handleChange(t.type)}
                     className={`px-3 py-1 rounded text-sm ${
-                        activeEntityType === t.type
+                        activeViewType === t.type
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-200 hover:bg-gray-300'
                     }`}

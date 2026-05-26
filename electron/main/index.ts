@@ -6,6 +6,7 @@ import os from 'node:os'
 import { update } from './update'
 import { registerCsvHandlers } from './csv-handlers'
 import { registerSettingsHandlers } from './settings-handlers'
+import { registerPhoneImageHandlers } from './phone-image-handlers'
 import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -127,6 +128,7 @@ async function createWindow() {
   // =========================
   registerCsvHandlers(win)
   registerSettingsHandlers()
+  registerPhoneImageHandlers()
   // =========================
 
   // Test actively push message to the Electron-Renderer

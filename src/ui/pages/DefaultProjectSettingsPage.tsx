@@ -6,14 +6,22 @@ import {
     FALLBACK_DEFAULT_PROJECT_SETTINGS,
     type DefaultProjectSettings,
 } from '@/features/csv-editor/domain/defaultProjectSettings'
+import {
+    FALLBACK_PHONE_IMAGE_SETTINGS,
+    normalizePhoneImageSettings,
+    type PhoneImageSettings,
+} from '@/features/csv-editor/domain/phoneImageSettings'
 import { defaultProjectSettingsService } from '@/features/csv-editor/services/defaultProjectSettingsService'
+import { phoneImageSettingsService } from '@/features/csv-editor/services/phoneImageSettingsService'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 export function DefaultProjectSettingsPage() {
     const navigate = useNavigate()
     const [settings, setSettings] = useState<DefaultProjectSettings>(FALLBACK_DEFAULT_PROJECT_SETTINGS)
+    const [phoneImageSettings, setPhoneImageSettings] = useState<PhoneImageSettings>(FALLBACK_PHONE_IMAGE_SETTINGS)
     const [status, setStatus] = useState<SaveStatus>('idle')
+    const [phoneImageStatus, setPhoneImageStatus] = useState<SaveStatus>('idle')
 
     useEffect(() => {
         let isMounted = true
@@ -21,6 +29,12 @@ export function DefaultProjectSettingsPage() {
         defaultProjectSettingsService.getDefaultProjectSettings().then((storedSettings) => {
             if (isMounted) {
                 setSettings(storedSettings)
+            }
+        })
+
+        phoneImageSettingsService.getPhoneImageSettings().then((storedSettings) => {
+            if (isMounted) {
+                setPhoneImageSettings(storedSettings)
             }
         })
 
@@ -34,6 +48,14 @@ export function DefaultProjectSettingsPage() {
         setSettings((current) => ({
             ...current,
             [field]: value,
+        }))
+    }
+
+    const updatePhoneImageField = (field: keyof PhoneImageSettings, value: string) => {
+        setPhoneImageStatus('idle')
+        setPhoneImageSettings((current) => ({
+            ...current,
+            [field]: field === 'workPath' ? value : Number(value),
         }))
     }
 
@@ -56,6 +78,41 @@ export function DefaultProjectSettingsPage() {
 
     const handleReset = async () => {
         await saveSettings(FALLBACK_DEFAULT_PROJECT_SETTINGS)
+    }
+
+    const savePhoneImageSettings = async (nextSettings: PhoneImageSettings) => {
+        setPhoneImageStatus('saving')
+
+        try {
+            const savedSettings = await phoneImageSettingsService.setPhoneImageSettings(
+                normalizePhoneImageSettings(nextSettings)
+            )
+            setPhoneImageSettings(savedSettings)
+            setPhoneImageStatus('saved')
+        } catch {
+            setPhoneImageSettings(FALLBACK_PHONE_IMAGE_SETTINGS)
+            setPhoneImageStatus('error')
+        }
+    }
+
+    const handlePhoneImageSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        await savePhoneImageSettings(phoneImageSettings)
+    }
+
+    const handlePhoneImageReset = async () => {
+        await savePhoneImageSettings(FALLBACK_PHONE_IMAGE_SETTINGS)
+    }
+
+    const handleSelectWorkPath = async () => {
+        setPhoneImageStatus('idle')
+        const selectedPath = await phoneImageSettingsService.selectWorkPath()
+        if (!selectedPath) return
+
+        setPhoneImageSettings((current) => ({
+            ...current,
+            workPath: selectedPath,
+        }))
     }
 
     return (
@@ -140,6 +197,83 @@ export function DefaultProjectSettingsPage() {
                         )}
 
                         {status === 'error' && (
+                            <span className="text-sm text-red-700">Setările nu au putut fi salvate.</span>
+                        )}
+                    </div>
+                </form>
+
+                <form onSubmit={handlePhoneImageSubmit} className="flex flex-col gap-5 rounded bg-white p-5 shadow-sm">
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                            Setări imagine apel telefonic
+                        </h2>
+                    </div>
+
+                    <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-gray-700">Folder imagini telefonice</span>
+                        <div className="flex gap-2">
+                            <input
+                                value={phoneImageSettings.workPath}
+                                onChange={(event) => updatePhoneImageField('workPath', event.target.value)}
+                                className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleSelectWorkPath}
+                                className="shrink-0 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                            >
+                                Alege folder
+                            </button>
+                        </div>
+                    </label>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="flex flex-col gap-1">
+                            <span className="text-sm font-medium text-gray-700">Width imagine finală</span>
+                            <input
+                                type="number"
+                                min="1"
+                                value={phoneImageSettings.width}
+                                onChange={(event) => updatePhoneImageField('width', event.target.value)}
+                                className="rounded border border-gray-300 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </label>
+
+                        <label className="flex flex-col gap-1">
+                            <span className="text-sm font-medium text-gray-700">Height imagine finală</span>
+                            <input
+                                type="number"
+                                min="1"
+                                value={phoneImageSettings.height}
+                                onChange={(event) => updatePhoneImageField('height', event.target.value)}
+                                className="rounded border border-gray-300 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </label>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button
+                            type="submit"
+                            disabled={phoneImageStatus === 'saving'}
+                            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            Salvează
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={handlePhoneImageReset}
+                            disabled={phoneImageStatus === 'saving'}
+                            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            Resetează la valori standard
+                        </button>
+
+                        {phoneImageStatus === 'saved' && (
+                            <span className="text-sm text-green-700">Salvat.</span>
+                        )}
+
+                        {phoneImageStatus === 'error' && (
                             <span className="text-sm text-red-700">Setările nu au putut fi salvate.</span>
                         )}
                     </div>

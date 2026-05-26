@@ -6,7 +6,12 @@ import {
     FALLBACK_DEFAULT_PROJECT_SETTINGS,
     type DefaultProjectSettings,
 } from '@/features/csv-editor/domain/defaultProjectSettings'
+import {
+    FALLBACK_PHONE_IMAGE_SETTINGS,
+    type PhoneImageSettings,
+} from '@/features/csv-editor/domain/phoneImageSettings'
 import { defaultProjectSettingsService } from '@/features/csv-editor/services/defaultProjectSettingsService'
+import { phoneImageSettingsService } from '@/features/csv-editor/services/phoneImageSettingsService'
 import { DefaultProjectSettingsPage } from './DefaultProjectSettingsPage'
 
 vi.mock('@/features/csv-editor/services/defaultProjectSettingsService', () => ({
@@ -16,11 +21,25 @@ vi.mock('@/features/csv-editor/services/defaultProjectSettingsService', () => ({
     },
 }))
 
+vi.mock('@/features/csv-editor/services/phoneImageSettingsService', () => ({
+    phoneImageSettingsService: {
+        getPhoneImageSettings: vi.fn(),
+        setPhoneImageSettings: vi.fn(),
+        selectWorkPath: vi.fn(),
+    },
+}))
+
 const savedSettings: DefaultProjectSettings = {
     title: 'SAVED TITLE',
     personName: 'SAVED NAME',
     personOccupation: 'SAVED OCCUPATION',
     location: 'SAVED LOCATION',
+}
+
+const savedPhoneImageSettings: PhoneImageSettings = {
+    workPath: 'WORK_PATH',
+    width: 420,
+    height: 540,
 }
 
 function renderPage() {
@@ -38,6 +57,9 @@ describe('DefaultProjectSettingsPage', () => {
     beforeEach(() => {
         vi.mocked(defaultProjectSettingsService.getDefaultProjectSettings).mockResolvedValue(savedSettings)
         vi.mocked(defaultProjectSettingsService.setDefaultProjectSettings).mockImplementation(async (settings) => settings)
+        vi.mocked(phoneImageSettingsService.getPhoneImageSettings).mockResolvedValue(savedPhoneImageSettings)
+        vi.mocked(phoneImageSettingsService.setPhoneImageSettings).mockImplementation(async (settings) => settings)
+        vi.mocked(phoneImageSettingsService.selectWorkPath).mockResolvedValue('SELECTED_WORK_PATH')
     })
 
     afterEach(() => {
@@ -45,19 +67,39 @@ describe('DefaultProjectSettingsPage', () => {
         vi.clearAllMocks()
     })
 
-    it('shows the required fields', async () => {
+    it('shows the required fields', () => {
         renderPage()
 
-        expect(screen.getByRole('heading', { name: 'Setări proiect nou' })).toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: /proiect nou/i })).toBeInTheDocument()
         expect(screen.getByText(/Texte standard pentru proiect nou/i)).toBeInTheDocument()
-        expect(screen.getByText(/următorul proiect nou/i)).toBeInTheDocument()
+        expect(screen.getByText(/urm/i)).toBeInTheDocument()
         expect(screen.getByLabelText('Titlu implicit')).toBeInTheDocument()
         expect(screen.getByLabelText('Nume implicit')).toBeInTheDocument()
-        expect(screen.getByLabelText('Funcție implicită')).toBeInTheDocument()
-        expect(screen.getByLabelText('Locație implicită')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Salvează' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Resetează la valori standard' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Înapoi la editor' })).toBeInTheDocument()
+        expect(screen.getByLabelText(/Func/)).toBeInTheDocument()
+        expect(screen.getByLabelText(/Loca/)).toBeInTheDocument()
+        expect(screen.getAllByRole('button', { name: /Salve/ })).toHaveLength(2)
+        expect(screen.getAllByRole('button', { name: /Reseteaz/ })).toHaveLength(2)
+        expect(screen.getByRole('button', { name: /editor/i })).toBeInTheDocument()
+    })
+
+    it('shows phone image settings section', () => {
+        renderPage()
+
+        expect(screen.getByRole('heading', { name: /imagine apel telefonic/i })).toBeInTheDocument()
+    })
+
+    it('shows phone image folder field', () => {
+        renderPage()
+
+        expect(screen.getByLabelText('Folder imagini telefonice')).toBeInTheDocument()
+    })
+
+    it('shows phone image size fields and folder picker', () => {
+        renderPage()
+
+        expect(screen.getByLabelText(/Width imagine/)).toBeInTheDocument()
+        expect(screen.getByLabelText(/Height imagine/)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Alege folder' })).toBeInTheDocument()
     })
 
     it('loads saved values', async () => {
@@ -68,8 +110,8 @@ describe('DefaultProjectSettingsPage', () => {
         })
 
         expect(screen.getByLabelText('Nume implicit')).toHaveValue(savedSettings.personName)
-        expect(screen.getByLabelText('Funcție implicită')).toHaveValue(savedSettings.personOccupation)
-        expect(screen.getByLabelText('Locație implicită')).toHaveValue(savedSettings.location)
+        expect(screen.getByLabelText(/Func/)).toHaveValue(savedSettings.personOccupation)
+        expect(screen.getByLabelText(/Loca/)).toHaveValue(savedSettings.location)
     })
 
     it('allows editing fields', async () => {
@@ -98,7 +140,7 @@ describe('DefaultProjectSettingsPage', () => {
 
         await user.clear(titleInput)
         await user.type(titleInput, 'TITLE TO SAVE')
-        await user.click(screen.getByRole('button', { name: 'Salvează' }))
+        await user.click(screen.getAllByRole('button', { name: /Salve/ })[0])
 
         await waitFor(() => {
             expect(defaultProjectSettingsService.setDefaultProjectSettings).toHaveBeenCalledWith({
@@ -116,15 +158,15 @@ describe('DefaultProjectSettingsPage', () => {
             expect(screen.getByLabelText('Titlu implicit')).toHaveValue(savedSettings.title)
         })
 
-        await user.click(screen.getByRole('button', { name: 'Resetează la valori standard' }))
+        await user.click(screen.getAllByRole('button', { name: /Reseteaz/ })[0])
 
         await waitFor(() => {
             expect(screen.getByLabelText('Titlu implicit')).toHaveValue(FALLBACK_DEFAULT_PROJECT_SETTINGS.title)
         })
 
         expect(screen.getByLabelText('Nume implicit')).toHaveValue(FALLBACK_DEFAULT_PROJECT_SETTINGS.personName)
-        expect(screen.getByLabelText('Funcție implicită')).toHaveValue(FALLBACK_DEFAULT_PROJECT_SETTINGS.personOccupation)
-        expect(screen.getByLabelText('Locație implicită')).toHaveValue(FALLBACK_DEFAULT_PROJECT_SETTINGS.location)
+        expect(screen.getByLabelText(/Func/)).toHaveValue(FALLBACK_DEFAULT_PROJECT_SETTINGS.personOccupation)
+        expect(screen.getByLabelText(/Loca/)).toHaveValue(FALLBACK_DEFAULT_PROJECT_SETTINGS.location)
         expect(defaultProjectSettingsService.setDefaultProjectSettings).toHaveBeenCalledWith(
             FALLBACK_DEFAULT_PROJECT_SETTINGS,
         )
@@ -134,8 +176,79 @@ describe('DefaultProjectSettingsPage', () => {
         const user = userEvent.setup()
         renderPage()
 
-        await user.click(screen.getByRole('button', { name: 'Înapoi la editor' }))
+        await user.click(screen.getByRole('button', { name: /editor/i }))
 
         expect(screen.getByText('CSV editor page')).toBeInTheDocument()
+    })
+
+    it('allows changing phone image width and height', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        const widthInput = screen.getByLabelText(/Width imagine/)
+        const heightInput = screen.getByLabelText(/Height imagine/)
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Folder imagini telefonice')).toHaveValue(savedPhoneImageSettings.workPath)
+        })
+
+        await user.clear(widthInput)
+        await user.type(widthInput, '640')
+        await user.clear(heightInput)
+        await user.type(heightInput, '720')
+
+        expect(widthInput).toHaveValue(640)
+        expect(heightInput).toHaveValue(720)
+    })
+
+    it('saves phone image settings through the service', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        const widthInput = screen.getByLabelText(/Width imagine/)
+        const heightInput = screen.getByLabelText(/Height imagine/)
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Folder imagini telefonice')).toHaveValue(savedPhoneImageSettings.workPath)
+        })
+
+        await user.clear(widthInput)
+        await user.type(widthInput, '640')
+        await user.clear(heightInput)
+        await user.type(heightInput, '720')
+        await user.click(screen.getAllByRole('button', { name: /Salve/ })[1])
+
+        await waitFor(() => {
+            expect(phoneImageSettingsService.setPhoneImageSettings).toHaveBeenCalledWith({
+                workPath: savedPhoneImageSettings.workPath,
+                width: 640,
+                height: 720,
+            })
+        })
+    })
+
+    it('selects phone image work path through the service', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        await user.click(screen.getByRole('button', { name: 'Alege folder' }))
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Folder imagini telefonice')).toHaveValue('SELECTED_WORK_PATH')
+        })
+        expect(phoneImageSettingsService.selectWorkPath).toHaveBeenCalledOnce()
+    })
+
+    it('resets phone image settings to fallback values', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        await user.click(screen.getAllByRole('button', { name: /Reseteaz/ })[1])
+
+        await waitFor(() => {
+            expect(phoneImageSettingsService.setPhoneImageSettings).toHaveBeenCalledWith(
+                FALLBACK_PHONE_IMAGE_SETTINGS
+            )
+        })
     })
 })

@@ -58,6 +58,66 @@ describe('parseCsv', () => {
         expect(result.sections[0].rows[0].waitLocation).toBeUndefined()
     })
 
+    it('parses Image column for a person', () => {
+        const csv = [
+            'Nr;Titlu;Nume;Functie;Locatie;Image',
+            ';;ION POPESCU;EXPERT;;WORK_PATH/ion_popescu.jpg',
+        ].join('\n')
+
+        const result = parseCsv(csv)
+        const person = result.sections[0].rows[0].person as any
+
+        expect(person).toBeDefined()
+        expect(person.image).toBe('WORK_PATH/ion_popescu.jpg')
+    })
+
+    it('keeps Image value exactly as the CSV string', () => {
+        const csv = [
+            'Nr;Titlu;Nume;Functie;Locatie;Image',
+            ';;ION POPESCU;EXPERT;;WORK_PATH/ion_popescu.jpg',
+        ].join('\n')
+
+        const result = parseCsv(csv)
+
+        expect((result.sections[0].rows[0].person as any).image).toBe(
+            'WORK_PATH/ion_popescu.jpg'
+        )
+    })
+
+    it('sets person.image to undefined when Image column is missing', () => {
+        const csv = [
+            'Nr;Titlu;Nume;Functie;Locatie',
+            ';;ION POPESCU;EXPERT;',
+        ].join('\n')
+
+        const result = parseCsv(csv)
+
+        expect((result.sections[0].rows[0].person as any).image).toBeUndefined()
+    })
+
+    it('sets person.image to undefined when Image column is empty', () => {
+        const csv = [
+            'Nr;Titlu;Nume;Functie;Locatie;Image',
+            ';;ION POPESCU;EXPERT;;',
+        ].join('\n')
+
+        const result = parseCsv(csv)
+
+        expect((result.sections[0].rows[0].person as any).image).toBeUndefined()
+    })
+
+    it('does not crash when CSV contains Image column', () => {
+        const csv = [
+            'Nr;Titlu;Nume;Functie;Locatie;Image',
+            '1;Titlu simplu;ION POPESCU;EXPERT;;WORK_PATH/ion_popescu.jpg',
+        ].join('\n')
+
+        const result = parseCsv(csv)
+
+        expect(result.sections[0].rows[0].title?.title).toBe('Titlu simplu')
+        expect(result.sections[0].rows[0].person?.name).toBe('ION POPESCU')
+    })
+
     it('creates BETA and INVITATI sections in marker order with invited last', () => {
         const csv = [
             header,

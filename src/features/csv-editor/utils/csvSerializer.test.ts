@@ -7,6 +7,7 @@ const importantColumns = [
     CSV_COLUMNS.TITLE,
     CSV_COLUMNS.PERSON_NAME,
     CSV_COLUMNS.PERSON_OCCUPATION,
+    CSV_COLUMNS.IMAGE,
     CSV_COLUMNS.LOCATION,
     CSV_COLUMNS.HOT_TITLE,
     CSV_COLUMNS.WAIT_TITLE,
@@ -49,6 +50,136 @@ describe('serializeCsv', () => {
         expect(row.hotTitle).toBeUndefined()
         expect(row.waitTitle).toBeUndefined()
         expect(row.waitLocation).toBeUndefined()
+    })
+
+    it('writes full person.image path in the Image column', () => {
+        const state: EntitiesState = {
+            sections: [
+                {
+                    id: 'invited-1',
+                    kind: 'invited',
+                    rows: [
+                        {
+                            id: 'row-1',
+                            person: {
+                                id: 'person-1',
+                                name: 'ION POPESCU',
+                                occupation: 'EXPERT',
+                                image: 'C:\\PhoneImages\\ion_popescu.jpg',
+                            },
+                        },
+                    ],
+                },
+            ],
+        }
+
+        const serialized = serializeCsv(state)
+        const [headerRow, , dataRow] = serialized.split(/\r?\n/)
+        const imageIndex = headerRow.split(';').indexOf(CSV_COLUMNS.IMAGE)
+
+        expect(dataRow.split(';')[imageIndex]).toBe('C:\\PhoneImages\\ion_popescu.jpg')
+    })
+
+    it('leaves Image column empty when person.image is missing', () => {
+        const state: EntitiesState = {
+            sections: [
+                {
+                    id: 'invited-1',
+                    kind: 'invited',
+                    rows: [
+                        {
+                            id: 'row-1',
+                            person: {
+                                id: 'person-1',
+                                name: 'ION POPESCU',
+                                occupation: 'EXPERT',
+                            },
+                        },
+                    ],
+                },
+            ],
+        }
+
+        const serialized = serializeCsv(state)
+        const [headerRow, , dataRow] = serialized.split(/\r?\n/)
+        const imageIndex = headerRow.split(';').indexOf(CSV_COLUMNS.IMAGE)
+
+        expect(dataRow.split(';')[imageIndex]).toBe('')
+    })
+
+    it('serialized CSV contains Image header', () => {
+        const state: EntitiesState = {
+            sections: [
+                {
+                    id: 'invited-1',
+                    kind: 'invited',
+                    rows: [],
+                },
+            ],
+        }
+
+        const serialized = serializeCsv(state)
+        const [serializedHeader] = serialized.split(/\r?\n/)
+
+        expect(serializedHeader.split(';')).toContain(CSV_COLUMNS.IMAGE)
+    })
+
+    it('keeps full person.image path through parseCsv(serializeCsv(state))', () => {
+        const state: EntitiesState = {
+            sections: [
+                {
+                    id: 'invited-1',
+                    kind: 'invited',
+                    rows: [
+                        {
+                            id: 'row-1',
+                            person: {
+                                id: 'person-1',
+                                name: 'ION POPESCU',
+                                occupation: 'EXPERT',
+                                image: 'C:\\PhoneImages\\ion_popescu.jpg',
+                            },
+                        },
+                    ],
+                },
+            ],
+        }
+
+        const reparsed = parseCsv(serializeCsv(state))
+
+        expect(reparsed.sections[0].rows[0].person?.image).toBe(
+            'C:\\PhoneImages\\ion_popescu.jpg'
+        )
+    })
+
+    it('expands legacy WORK_PATH image refs when phone image workPath is provided', () => {
+        const state: EntitiesState = {
+            sections: [
+                {
+                    id: 'invited-1',
+                    kind: 'invited',
+                    rows: [
+                        {
+                            id: 'row-1',
+                            person: {
+                                id: 'person-1',
+                                name: 'ION POPESCU',
+                                occupation: 'EXPERT',
+                                image: 'WORK_PATH/ion_popescu.jpg',
+                            },
+                        },
+                    ],
+                },
+            ],
+        }
+
+        const serialized = serializeCsv(state, {
+            phoneImageWorkPath: 'C:\\PhoneImages',
+        })
+        const [headerRow, , dataRow] = serialized.split(/\r?\n/)
+        const imageIndex = headerRow.split(';').indexOf(CSV_COLUMNS.IMAGE)
+
+        expect(dataRow.split(';')[imageIndex]).toBe('C:\\PhoneImages\\ion_popescu.jpg')
     })
 
     it('serializes new data with stable legacy columns left empty', () => {
