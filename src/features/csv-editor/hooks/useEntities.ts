@@ -8,7 +8,7 @@ import { createDefaultProjectEntities } from '../domain/defaultProject'
 import { FALLBACK_DEFAULT_PROJECT_SETTINGS } from '../domain/defaultProjectSettings'
 import { csvService } from '../services/csvService'
 import { defaultProjectSettingsService } from '../services/defaultProjectSettingsService'
-import { parseCsv } from '../utils/csvParser'
+import { settingsService } from '../services/settingsService'
 import { serializeCsv } from '../utils/csvSerializer'
 
 type BlockItem =
@@ -119,25 +119,17 @@ export function useEntities() {
     // -------- START NEW PROJECT (CANONICAL) --------
     /**
      * Start a new project:
-     * 1) read saved default project settings
-     * 2) build default project entities
-     * 3) backup current CSV
-     * 4) reset entities -> default project seed
-     * 5) write default project CSV (so disk matches state)
+     * 1) serialize current CSV
+     * 2) backup current CSV
+     * 3) read saved default project settings
+     * 4) build default project entities
+     * 5) reset entities -> default project seed
+     * 6) write default project CSV (so disk matches state)
      */
     const startNewProject = useCallback(async (): Promise<StartNewProjectResult> => {
-        // 1) read settings and 2) build default project entities
-        const defaultProjectSettings = await defaultProjectSettingsService
-            .getDefaultProjectSettings()
-            .catch((error) => {
-                console.error('Failed to read default project settings:', error)
-                return FALLBACK_DEFAULT_PROJECT_SETTINGS
-            })
-        const nextEntities = createDefaultProjectEntities(defaultProjectSettings)
-
-        // 3) backup current CSV
+        // 1) serialize and 2) backup current CSV before any reset/write.
         const currentCsv = serializeCsv(state.entities)
-        const backupRes = await csvService.backup(currentCsv)
+        const backupRes = await csvService.createBackup(currentCsv)
         if (!backupRes.ok) {
             console.error('Backup failed:', backupRes.error)
             return {
@@ -146,12 +138,22 @@ export function useEntities() {
             }
         }
 
-        // QuickTitles are global app settings, not project data; keep them on new project.
+        // 3) read settings and 4) build default project entities
+        const defaultProjectSettings = await defaultProjectSettingsService
+            .getDefaultProjectSettings()
+            .catch((error) => {
+                console.error('Failed to read default project settings:', error)
+                return FALLBACK_DEFAULT_PROJECT_SETTINGS
+            })
+        const nextEntities = createDefaultProjectEntities(defaultProjectSettings)
 
-        // 4) reset reducer state
+        // QuickTitles belong to the current project workflow; clear them after backup succeeds.
+        await settingsService.setQuickTitles([])
+
+        // 5) reset reducer state
         dispatch({ type: 'ENTITY_CLEAR_ALL', payload: nextEntities })
 
-        // 5) write default project CSV
+        // 6) write default project CSV
         const defaultProjectCsv = serializeCsv(nextEntities)
         const writeRes = await csvService.write(defaultProjectCsv)
         if (!writeRes.ok) {
@@ -164,15 +166,6 @@ export function useEntities() {
 
         return { ok: true }
     }, [dispatch, state.entities])
-
-    // -------- LOAD CSV --------
-    const loadCsv = useCallback(async () => {
-        const opened = await csvService.openDialog()
-        if (opened?.content) {
-            const entities = parseCsv(opened.content)
-            dispatch({ type: 'CSV_LOADED', payload: entities })
-        }
-    }, [dispatch])
 
     return {
         // state
@@ -202,8 +195,5 @@ export function useEntities() {
         startNewProject,
         // Legacy alias kept temporarily for old consumers. New code should use startNewProject.
         clearAll: startNewProject,
-
-        // IO
-        loadCsv,
     }
 }

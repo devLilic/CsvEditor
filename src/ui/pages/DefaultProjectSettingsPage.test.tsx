@@ -10,8 +10,10 @@ import {
     FALLBACK_PHONE_IMAGE_SETTINGS,
     type PhoneImageSettings,
 } from '@/features/csv-editor/domain/phoneImageSettings'
+import type { CsvFileSettings } from '@/features/csv-editor/domain/csvFileSettings'
 import { defaultProjectSettingsService } from '@/features/csv-editor/services/defaultProjectSettingsService'
 import { phoneImageSettingsService } from '@/features/csv-editor/services/phoneImageSettingsService'
+import { csvFileSettingsService } from '@/features/csv-editor/services/csvFileSettingsService'
 import { DefaultProjectSettingsPage } from './DefaultProjectSettingsPage'
 
 vi.mock('@/features/csv-editor/services/defaultProjectSettingsService', () => ({
@@ -29,6 +31,15 @@ vi.mock('@/features/csv-editor/services/phoneImageSettingsService', () => ({
     },
 }))
 
+vi.mock('@/features/csv-editor/services/csvFileSettingsService', () => ({
+    csvFileSettingsService: {
+        getCsvFileSettings: vi.fn(),
+        setCsvFileSettings: vi.fn(),
+        selectWorkingCsv: vi.fn(),
+        selectBackupFolder: vi.fn(),
+    },
+}))
+
 const savedSettings: DefaultProjectSettings = {
     title: 'SAVED TITLE',
     personName: 'SAVED NAME',
@@ -40,6 +51,11 @@ const savedPhoneImageSettings: PhoneImageSettings = {
     workPath: 'WORK_PATH',
     width: 420,
     height: 540,
+}
+
+const savedCsvFileSettings: CsvFileSettings = {
+    workingCsvPath: 'C:/work/current.csv',
+    backupFolderPath: 'C:/work/backups',
 }
 
 function renderPage() {
@@ -60,6 +76,10 @@ describe('DefaultProjectSettingsPage', () => {
         vi.mocked(phoneImageSettingsService.getPhoneImageSettings).mockResolvedValue(savedPhoneImageSettings)
         vi.mocked(phoneImageSettingsService.setPhoneImageSettings).mockImplementation(async (settings) => settings)
         vi.mocked(phoneImageSettingsService.selectWorkPath).mockResolvedValue('SELECTED_WORK_PATH')
+        vi.mocked(csvFileSettingsService.getCsvFileSettings).mockResolvedValue(savedCsvFileSettings)
+        vi.mocked(csvFileSettingsService.setCsvFileSettings).mockImplementation(async (settings) => settings)
+        vi.mocked(csvFileSettingsService.selectWorkingCsv).mockResolvedValue('C:/selected/selected.csv')
+        vi.mocked(csvFileSettingsService.selectBackupFolder).mockResolvedValue('C:/selected/backups')
     })
 
     afterEach(() => {
@@ -77,7 +97,7 @@ describe('DefaultProjectSettingsPage', () => {
         expect(screen.getByLabelText('Nume implicit')).toBeInTheDocument()
         expect(screen.getByLabelText(/Func/)).toBeInTheDocument()
         expect(screen.getByLabelText(/Loca/)).toBeInTheDocument()
-        expect(screen.getAllByRole('button', { name: /Salve/ })).toHaveLength(2)
+        expect(screen.getAllByRole('button', { name: /Salve/ })).toHaveLength(3)
         expect(screen.getAllByRole('button', { name: /Reseteaz/ })).toHaveLength(2)
         expect(screen.getByRole('button', { name: /editor/i })).toBeInTheDocument()
     })
@@ -86,6 +106,16 @@ describe('DefaultProjectSettingsPage', () => {
         renderPage()
 
         expect(screen.getByRole('heading', { name: /imagine apel telefonic/i })).toBeInTheDocument()
+    })
+
+    it('shows CSV file settings section', () => {
+        renderPage()
+
+        expect(screen.getByRole('heading', { name: /fișier CSV/i })).toBeInTheDocument()
+        expect(screen.getByLabelText('Fișier CSV de lucru')).toBeInTheDocument()
+        expect(screen.getByLabelText('Folder backup CSV')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Alege CSV' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Alege folder backup' })).toBeInTheDocument()
     })
 
     it('shows phone image folder field', () => {
@@ -112,6 +142,16 @@ describe('DefaultProjectSettingsPage', () => {
         expect(screen.getByLabelText('Nume implicit')).toHaveValue(savedSettings.personName)
         expect(screen.getByLabelText(/Func/)).toHaveValue(savedSettings.personOccupation)
         expect(screen.getByLabelText(/Loca/)).toHaveValue(savedSettings.location)
+    })
+
+    it('loads saved CSV file settings values', async () => {
+        renderPage()
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Fișier CSV de lucru')).toHaveValue(savedCsvFileSettings.workingCsvPath)
+        })
+
+        expect(screen.getByLabelText('Folder backup CSV')).toHaveValue(savedCsvFileSettings.backupFolderPath)
     })
 
     it('allows editing fields', async () => {
@@ -249,6 +289,50 @@ describe('DefaultProjectSettingsPage', () => {
             expect(phoneImageSettingsService.setPhoneImageSettings).toHaveBeenCalledWith(
                 FALLBACK_PHONE_IMAGE_SETTINGS
             )
+        })
+    })
+
+    it('selects working CSV through the CSV file settings service', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        await user.click(screen.getByRole('button', { name: 'Alege CSV' }))
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Fișier CSV de lucru')).toHaveValue('C:/selected/selected.csv')
+        })
+        expect(csvFileSettingsService.selectWorkingCsv).toHaveBeenCalledOnce()
+    })
+
+    it('selects backup folder through the CSV file settings service', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        await user.click(screen.getByRole('button', { name: 'Alege folder backup' }))
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Folder backup CSV')).toHaveValue('C:/selected/backups')
+        })
+        expect(csvFileSettingsService.selectBackupFolder).toHaveBeenCalledOnce()
+    })
+
+    it('saves CSV file settings through the service', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Fișier CSV de lucru')).toHaveValue(savedCsvFileSettings.workingCsvPath)
+        })
+
+        await user.click(screen.getByRole('button', { name: 'Alege CSV' }))
+        await user.click(screen.getByRole('button', { name: 'Alege folder backup' }))
+        await user.click(screen.getAllByRole('button', { name: /Salve/ })[2])
+
+        await waitFor(() => {
+            expect(csvFileSettingsService.setCsvFileSettings).toHaveBeenCalledWith({
+                workingCsvPath: 'C:/selected/selected.csv',
+                backupFolderPath: 'C:/selected/backups',
+            })
         })
     })
 })

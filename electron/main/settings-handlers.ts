@@ -4,6 +4,7 @@ import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
 import type { AppConfig } from '../../src/shared/ipc-types'
 import { isDefaultProjectSettings } from '../../src/features/csv-editor/domain/defaultProjectSettings'
 import { normalizePhoneImageSettings } from '../../src/features/csv-editor/domain/phoneImageSettings'
+import { normalizeCsvFileSettings } from '../../src/features/csv-editor/domain/csvFileSettings'
 import {
     getQuickTitles,
     setQuickTitles,
@@ -13,6 +14,8 @@ import {
     setDefaultProjectSettings,
     getPhoneImageSettings,
     setPhoneImageSettings,
+    getCsvFileSettings,
+    setCsvFileSettings,
 } from '../store'
 
 function isStringArray(value: unknown): value is string[] {
@@ -121,6 +124,59 @@ export function registerSettingsHandlers() {
             return result.filePaths[0] ?? null
         } catch (error) {
             console.error('[settings:select-work-path] failed:', error)
+            return null
+        }
+    })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_GET_CSV_FILE, () => {
+        try {
+            return getCsvFileSettings()
+        } catch (error) {
+            console.error('[settings:get-csv-file] failed:', error)
+            return getCsvFileSettings()
+        }
+    })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_SET_CSV_FILE, (_event, settings: unknown) => {
+        try {
+            return setCsvFileSettings(normalizeCsvFileSettings(settings))
+        } catch (error) {
+            console.error('[settings:set-csv-file] failed:', error)
+            return getCsvFileSettings()
+        }
+    })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_SELECT_WORKING_CSV, async () => {
+        try {
+            const result = await dialog.showOpenDialog({
+                properties: ['openFile'],
+                filters: [{ name: 'CSV', extensions: ['csv'] }],
+            })
+
+            if (result.canceled) {
+                return null
+            }
+
+            return result.filePaths[0] ?? null
+        } catch (error) {
+            console.error('[settings:select-working-csv] failed:', error)
+            return null
+        }
+    })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_SELECT_BACKUP_FOLDER, async () => {
+        try {
+            const result = await dialog.showOpenDialog({
+                properties: ['openDirectory'],
+            })
+
+            if (result.canceled) {
+                return null
+            }
+
+            return result.filePaths[0] ?? null
+        } catch (error) {
+            console.error('[settings:select-backup-folder] failed:', error)
             return null
         }
     })

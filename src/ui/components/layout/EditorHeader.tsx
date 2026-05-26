@@ -1,43 +1,11 @@
 // src/ui/components/layout/EditorHeader.tsx
+import { useState } from 'react'
 import { useEntities } from '@/features/csv-editor'
 import { EditModeToggle } from '@/ui/components/EditModeToggle'
 import { useTitleFilter } from '@/ui/context/TitleFilterContext'
 import { SectionsTabs } from '@/ui/components/SectionsTabs'
+import { useWorkingCsvInfo } from '@/features/csv-editor/hooks/useWorkingCsvInfo'
 import { ConfirmDialog } from '../common/ConfirmDialog'
-
-function FileIcon() {
-    return (
-        <svg
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-            />
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M14 2v6h6"
-            />
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 13h8"
-            />
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 17h5"
-            />
-        </svg>
-    )
-}
 
 function TrashIcon() {
     return (
@@ -79,18 +47,25 @@ function TrashIcon() {
 }
 
 export function EditorHeader() {
-    const { startNewProject, loadCsv } = useEntities()
+    const { startNewProject } = useEntities()
     const { titleFilter, setTitleFilter } = useTitleFilter()
+    const [newProjectError, setNewProjectError] = useState<string | null>(null)
+    const workingCsvInfo = useWorkingCsvInfo()
 
     const handleStartNewProject = async () => {
+        setNewProjectError(null)
         const result = await startNewProject()
         if (!result.ok) {
-            window.alert(`Nu s-a putut porni proiectul nou: ${result.error}`)
+            setNewProjectError(
+                result.error.startsWith('Backup failed:')
+                    ? 'Backup CSV nu a putut fi creat. Proiectul nu a fost resetat. Verifica folderul de backup din Setari.'
+                    : `Nu s-a putut porni proiectul nou: ${result.error}`
+            )
         }
     }
 
     return (
-        <div className="flex items-center justify-between gap-4 border-b bg-white px-4 py-2">
+        <div className="relative flex items-center justify-between gap-4 border-b bg-white px-4 py-2">
             <SectionsTabs />
 
             <div className="relative flex items-center">
@@ -98,32 +73,28 @@ export function EditorHeader() {
                     type="text"
                     value={titleFilter}
                     onChange={(e) => setTitleFilter(e.target.value)}
-                    placeholder="Caută titlul"
+                    placeholder="Cauta titlul"
                     className="w-64 rounded border border-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                     onClick={() => setTitleFilter('')}
                     className="absolute right-1 bg-transparent px-2 py-2 text-sm text-gray-500 hover:bg-gray-100"
-                    aria-label="Curăță filtrul"
+                    aria-label="Curata filtrul"
                 >
                     <TrashIcon />
                 </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+                <span className="max-w-48 truncate rounded border border-gray-300 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700">
+                    CSV: {workingCsvInfo.filename}
+                </span>
+
                 <EditModeToggle />
 
-                <button
-                    onClick={loadCsv}
-                    className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-1 text-white"
-                >
-                    <FileIcon />
-                    Selectează CSV
-                </button>
-
                 <ConfirmDialog
-                    title="Începi un proiect nou?"
-                    description="Se va crea automat un backup al CSV-ului curent. Apoi CSV-ul curent va fi rescris cu textele standard pentru proiect nou."
+                    title="Incepi un proiect nou?"
+                    description="Se va crea un backup CSV in folderul setat in Setari. Doar dupa backup, fisierul de lucru va fi resetat cu continutul standard. Daca backup-ul esueaza, resetarea nu se face."
                     onConfirm={handleStartNewProject}
                 >
                     <button className="inline-flex items-center gap-2 rounded bg-red-600 px-4 py-1 text-white">
@@ -132,6 +103,15 @@ export function EditorHeader() {
                     </button>
                 </ConfirmDialog>
             </div>
+
+            {newProjectError && (
+                <div
+                    role="alert"
+                    className="absolute right-4 top-14 max-w-md rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 shadow-sm"
+                >
+                    {newProjectError}
+                </div>
+            )}
         </div>
     )
 }

@@ -70,7 +70,7 @@ describe('useEntities startNewProject', () => {
             personOccupation: 'SAVED DEFAULT ROLE',
             location: 'SAVED DEFAULT LOCATION',
         }
-        const backupSpy = vi.spyOn(csvService, 'backup').mockResolvedValue({ ok: true })
+        const backupSpy = vi.spyOn(csvService, 'createBackup').mockResolvedValue({ ok: true })
         const writeSpy = vi.spyOn(csvService, 'write').mockResolvedValue({ ok: true })
         const getSettingsSpy = vi.spyOn(defaultProjectSettingsService, 'getDefaultProjectSettings').mockResolvedValue(savedSettings)
         const setQuickTitlesSpy = vi.spyOn(settingsService, 'setQuickTitles')
@@ -103,15 +103,27 @@ describe('useEntities startNewProject', () => {
 
         expect(backupSpy).toHaveBeenCalledTimes(1)
         expect(writeSpy).toHaveBeenCalledTimes(1)
-        expect(setQuickTitlesSpy).not.toHaveBeenCalled()
-        expect(getSettingsSpy.mock.invocationCallOrder[0]).toBeLessThan(backupSpy.mock.invocationCallOrder[0])
-        expect(backupSpy.mock.invocationCallOrder[0]).toBeLessThan(writeSpy.mock.invocationCallOrder[0])
+        expect(setQuickTitlesSpy).toHaveBeenCalledWith([])
+        expect(backupSpy.mock.invocationCallOrder[0]).toBeLessThan(getSettingsSpy.mock.invocationCallOrder[0])
+        expect(getSettingsSpy.mock.invocationCallOrder[0]).toBeLessThan(setQuickTitlesSpy.mock.invocationCallOrder[0])
+        expect(setQuickTitlesSpy.mock.invocationCallOrder[0]).toBeLessThan(writeSpy.mock.invocationCallOrder[0])
 
+        const backupCsv = backupSpy.mock.calls[0][0]
         const writtenCsv = writeSpy.mock.calls[0][0]
+        expect(backupCsv).toContain('OLD TITLE')
+        expect(backupCsv).toContain('OLD NAME')
+        expect(backupCsv).toContain('OLD ROLE')
+        expect(backupCsv).toContain('OLD LOCATION')
+        expect(backupCsv).not.toContain(savedSettings.title)
+        expect(backupCsv).not.toContain(savedSettings.personName)
         expect(writtenCsv).toContain(savedSettings.title)
         expect(writtenCsv).toContain(savedSettings.personName)
         expect(writtenCsv).toContain(savedSettings.personOccupation)
         expect(writtenCsv).toContain(savedSettings.location)
+        expect(writtenCsv).not.toContain('OLD TITLE')
+        expect(writtenCsv).not.toContain('OLD NAME')
+        expect(writtenCsv).not.toContain('OLD ROLE')
+        expect(writtenCsv).not.toContain('OLD LOCATION')
         expect(writtenCsv).not.toContain(FALLBACK_DEFAULT_PROJECT_SETTINGS.personName)
         expect(writtenCsv).not.toContain(FALLBACK_DEFAULT_PROJECT_SETTINGS.personOccupation)
         expect(writtenCsv).not.toContain(FALLBACK_DEFAULT_PROJECT_SETTINGS.location)
@@ -126,7 +138,7 @@ describe('useEntities startNewProject', () => {
             personOccupation: 'SAVED DEFAULT ROLE',
             location: 'SAVED DEFAULT LOCATION',
         }
-        vi.spyOn(csvService, 'backup').mockResolvedValue({ ok: true })
+        vi.spyOn(csvService, 'createBackup').mockResolvedValue({ ok: true })
         const writeSpy = vi.spyOn(csvService, 'write').mockResolvedValue({ ok: true })
         vi.spyOn(defaultProjectSettingsService, 'getDefaultProjectSettings').mockResolvedValue(savedSettings)
 
@@ -152,8 +164,10 @@ describe('useEntities startNewProject', () => {
 
     it('returns a failure result when backup fails and does not write', async () => {
         const user = userEvent.setup()
-        const backupSpy = vi.spyOn(csvService, 'backup').mockResolvedValue({ ok: false, error: 'BACKUP_FAILED' })
+        const backupSpy = vi.spyOn(csvService, 'createBackup').mockResolvedValue({ ok: false, error: 'BACKUP_FAILED' })
         const writeSpy = vi.spyOn(csvService, 'write').mockResolvedValue({ ok: true })
+        const getSettingsSpy = vi.spyOn(defaultProjectSettingsService, 'getDefaultProjectSettings').mockResolvedValue(FALLBACK_DEFAULT_PROJECT_SETTINGS)
+        const setQuickTitlesSpy = vi.spyOn(settingsService, 'setQuickTitles')
         const resultSpy = vi.fn()
         window.addEventListener('start-new-project-result', ((event: CustomEvent) => {
             resultSpy(event.detail)
@@ -165,10 +179,17 @@ describe('useEntities startNewProject', () => {
             </CsvProvider>
         )
 
+        await user.click(screen.getByRole('button', { name: 'seed old data' }))
         await user.click(screen.getByRole('button', { name: 'start new project' }))
 
         expect(backupSpy).toHaveBeenCalledTimes(1)
         expect(writeSpy).not.toHaveBeenCalled()
+        expect(getSettingsSpy).not.toHaveBeenCalled()
+        expect(setQuickTitlesSpy).not.toHaveBeenCalled()
+        expect(screen.getByTestId('title')).toHaveTextContent('OLD TITLE')
+        expect(screen.getByTestId('person-name')).toHaveTextContent('OLD NAME')
+        expect(screen.getByTestId('person-occupation')).toHaveTextContent('OLD ROLE')
+        expect(screen.getByTestId('location')).toHaveTextContent('OLD LOCATION')
         expect(resultSpy).toHaveBeenCalledWith({
             ok: false,
             error: 'Backup failed: BACKUP_FAILED',
@@ -178,7 +199,7 @@ describe('useEntities startNewProject', () => {
     it('uses fallback settings when default project settings cannot be read', async () => {
         const user = userEvent.setup()
         vi.spyOn(defaultProjectSettingsService, 'getDefaultProjectSettings').mockRejectedValue(new Error('SETTINGS_FAILED'))
-        vi.spyOn(csvService, 'backup').mockResolvedValue({ ok: true })
+        vi.spyOn(csvService, 'createBackup').mockResolvedValue({ ok: true })
         const writeSpy = vi.spyOn(csvService, 'write').mockResolvedValue({ ok: true })
         const resultSpy = vi.fn()
         window.addEventListener('start-new-project-result', ((event: CustomEvent) => {
@@ -205,7 +226,7 @@ describe('useEntities startNewProject', () => {
 
     it('returns a failure result when write fails', async () => {
         const user = userEvent.setup()
-        vi.spyOn(csvService, 'backup').mockResolvedValue({ ok: true })
+        vi.spyOn(csvService, 'createBackup').mockResolvedValue({ ok: true })
         vi.spyOn(csvService, 'write').mockResolvedValue({ ok: false, error: 'WRITE_FAILED' })
         const resultSpy = vi.fn()
         window.addEventListener('start-new-project-result', ((event: CustomEvent) => {

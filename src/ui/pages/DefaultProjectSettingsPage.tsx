@@ -7,12 +7,17 @@ import {
     type DefaultProjectSettings,
 } from '@/features/csv-editor/domain/defaultProjectSettings'
 import {
+    FALLBACK_CSV_FILE_SETTINGS,
+    type CsvFileSettings,
+} from '@/features/csv-editor/domain/csvFileSettings'
+import {
     FALLBACK_PHONE_IMAGE_SETTINGS,
     normalizePhoneImageSettings,
     type PhoneImageSettings,
 } from '@/features/csv-editor/domain/phoneImageSettings'
 import { defaultProjectSettingsService } from '@/features/csv-editor/services/defaultProjectSettingsService'
 import { phoneImageSettingsService } from '@/features/csv-editor/services/phoneImageSettingsService'
+import { csvFileSettingsService } from '@/features/csv-editor/services/csvFileSettingsService'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -20,8 +25,10 @@ export function DefaultProjectSettingsPage() {
     const navigate = useNavigate()
     const [settings, setSettings] = useState<DefaultProjectSettings>(FALLBACK_DEFAULT_PROJECT_SETTINGS)
     const [phoneImageSettings, setPhoneImageSettings] = useState<PhoneImageSettings>(FALLBACK_PHONE_IMAGE_SETTINGS)
+    const [csvFileSettings, setCsvFileSettings] = useState<CsvFileSettings>(FALLBACK_CSV_FILE_SETTINGS)
     const [status, setStatus] = useState<SaveStatus>('idle')
     const [phoneImageStatus, setPhoneImageStatus] = useState<SaveStatus>('idle')
+    const [csvFileStatus, setCsvFileStatus] = useState<SaveStatus>('idle')
 
     useEffect(() => {
         let isMounted = true
@@ -35,6 +42,12 @@ export function DefaultProjectSettingsPage() {
         phoneImageSettingsService.getPhoneImageSettings().then((storedSettings) => {
             if (isMounted) {
                 setPhoneImageSettings(storedSettings)
+            }
+        })
+
+        csvFileSettingsService.getCsvFileSettings().then((storedSettings) => {
+            if (isMounted) {
+                setCsvFileSettings(storedSettings)
             }
         })
 
@@ -56,6 +69,14 @@ export function DefaultProjectSettingsPage() {
         setPhoneImageSettings((current) => ({
             ...current,
             [field]: field === 'workPath' ? value : Number(value),
+        }))
+    }
+
+    const updateCsvFileField = (field: keyof CsvFileSettings, value: string) => {
+        setCsvFileStatus('idle')
+        setCsvFileSettings((current) => ({
+            ...current,
+            [field]: value,
         }))
     }
 
@@ -112,6 +133,46 @@ export function DefaultProjectSettingsPage() {
         setPhoneImageSettings((current) => ({
             ...current,
             workPath: selectedPath,
+        }))
+    }
+
+    const saveCsvFileSettings = async (nextSettings: CsvFileSettings) => {
+        setCsvFileStatus('saving')
+
+        try {
+            const savedSettings = await csvFileSettingsService.setCsvFileSettings(nextSettings)
+            setCsvFileSettings(savedSettings)
+            setCsvFileStatus('saved')
+        } catch {
+            setCsvFileSettings(FALLBACK_CSV_FILE_SETTINGS)
+            setCsvFileStatus('error')
+        }
+    }
+
+    const handleCsvFileSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        await saveCsvFileSettings(csvFileSettings)
+    }
+
+    const handleSelectWorkingCsv = async () => {
+        setCsvFileStatus('idle')
+        const selectedPath = await csvFileSettingsService.selectWorkingCsv()
+        if (!selectedPath) return
+
+        setCsvFileSettings((current) => ({
+            ...current,
+            workingCsvPath: selectedPath,
+        }))
+    }
+
+    const handleSelectBackupFolder = async () => {
+        setCsvFileStatus('idle')
+        const selectedPath = await csvFileSettingsService.selectBackupFolder()
+        if (!selectedPath) return
+
+        setCsvFileSettings((current) => ({
+            ...current,
+            backupFolderPath: selectedPath,
         }))
     }
 
@@ -274,6 +335,68 @@ export function DefaultProjectSettingsPage() {
                         )}
 
                         {phoneImageStatus === 'error' && (
+                            <span className="text-sm text-red-700">Setările nu au putut fi salvate.</span>
+                        )}
+                    </div>
+                </form>
+
+                <form onSubmit={handleCsvFileSubmit} className="flex flex-col gap-5 rounded bg-white p-5 shadow-sm">
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                            Setări fișier CSV
+                        </h2>
+                    </div>
+
+                    <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-gray-700">Fișier CSV de lucru</span>
+                        <div className="flex gap-2">
+                            <input
+                                value={csvFileSettings.workingCsvPath}
+                                onChange={(event) => updateCsvFileField('workingCsvPath', event.target.value)}
+                                className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleSelectWorkingCsv}
+                                className="shrink-0 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                            >
+                                Alege CSV
+                            </button>
+                        </div>
+                    </label>
+
+                    <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-gray-700">Folder backup CSV</span>
+                        <div className="flex gap-2">
+                            <input
+                                value={csvFileSettings.backupFolderPath}
+                                onChange={(event) => updateCsvFileField('backupFolderPath', event.target.value)}
+                                className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleSelectBackupFolder}
+                                className="shrink-0 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                            >
+                                Alege folder backup
+                            </button>
+                        </div>
+                    </label>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button
+                            type="submit"
+                            disabled={csvFileStatus === 'saving'}
+                            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            Salvează
+                        </button>
+
+                        {csvFileStatus === 'saved' && (
+                            <span className="text-sm text-green-700">Salvat.</span>
+                        )}
+
+                        {csvFileStatus === 'error' && (
                             <span className="text-sm text-red-700">Setările nu au putut fi salvate.</span>
                         )}
                     </div>

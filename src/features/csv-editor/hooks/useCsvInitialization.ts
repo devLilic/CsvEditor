@@ -7,11 +7,12 @@ import { parseCsv } from '../utils/csvParser'
 import { useCsvContext } from '../context/CsvContext'
 import { createDefaultProjectEntities } from '../domain/defaultProject'
 import { defaultProjectSettingsService } from '../services/defaultProjectSettingsService'
+import { csvFileSettingsService } from '../services/csvFileSettingsService'
 
 /**
  * Hook responsabil exclusiv de initializarea CSV:
- * - incearca getLastCsv()
- * - fallback openCsvDialog()
+ * - citeste workingCsvPath din setari
+ * - daca este configurat, incearca getWorkingCsv()
  * - parse CSV
  * - dispatch CSV_LOADED
  *
@@ -30,24 +31,17 @@ export function useCsvInitialization() {
         hasInitializedRef.current = true
 
         ;(async () => {
-            const last = await csvService.getLast()
-            if (last?.content) {
-                const entities = parseCsv(last.content)
-                dispatch({
-                    type: 'CSV_LOADED',
-                    payload: entities,
-                })
-                return
-            }
-
-            const opened = await csvService.openDialog()
-            if (opened?.content) {
-                const entities = parseCsv(opened.content)
-                dispatch({
-                    type: 'CSV_LOADED',
-                    payload: entities,
-                })
-                return
+            const csvFileSettings = await csvFileSettingsService.getCsvFileSettings()
+            if (csvFileSettings.workingCsvPath) {
+                const workingCsv = await csvService.getWorkingCsv()
+                if (workingCsv.ok && workingCsv.content) {
+                    const entities = parseCsv(workingCsv.content)
+                    dispatch({
+                        type: 'CSV_LOADED',
+                        payload: entities,
+                    })
+                    return
+                }
             }
 
             const defaultProjectSettings = await defaultProjectSettingsService.getDefaultProjectSettings()

@@ -1,8 +1,11 @@
 export const IPC_CHANNELS = {
     CSV_GET_LAST: "csv:getLast",
+    CSV_GET_WORKING: "csv:get-working",
+    // Legacy: CSV selection now happens from Settings.
     CSV_OPEN_DIALOG: "csv:openDialog",
     CSV_WRITE: "csv:write",
     CSV_BKP: "csv:bkp",
+    CSV_CREATE_BACKUP: "csv:create-backup",
 
     SETTINGS_GET_QUICK_TITLES: "settings:get-quickTitles",
     SETTINGS_SET_QUICK_TITLES: "settings:set-quickTitles",
@@ -16,6 +19,10 @@ export const IPC_CHANNELS = {
     SETTINGS_GET_PHONE_IMAGE: "settings:get-phone-image",
     SETTINGS_SET_PHONE_IMAGE: "settings:set-phone-image",
     SETTINGS_SELECT_WORK_PATH: "settings:select-work-path",
+    SETTINGS_GET_CSV_FILE: "settings:get-csv-file",
+    SETTINGS_SET_CSV_FILE: "settings:set-csv-file",
+    SETTINGS_SELECT_WORKING_CSV: "settings:select-working-csv",
+    SETTINGS_SELECT_BACKUP_FOLDER: "settings:select-backup-folder",
 
     PHONE_IMAGE_SAVE_FINAL: "phone-image:save-final",
     PHONE_IMAGE_LOAD_DATA_URL: "phone-image:load-data-url",

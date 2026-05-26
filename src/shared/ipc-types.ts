@@ -2,10 +2,19 @@
 import { IPC_CHANNELS } from './ipc-channels'
 import type { DefaultProjectSettings } from '../features/csv-editor/domain/defaultProjectSettings'
 import type { PhoneImageSettings } from '../features/csv-editor/domain/phoneImageSettings'
+import type { CsvFileSettings } from '../features/csv-editor/domain/csvFileSettings'
 
 export interface CsvFileDescriptor {
     path: string
     content: string
+}
+
+export interface CsvGetWorkingResponse {
+    ok: boolean
+    path?: string
+    filename?: string
+    content?: string
+    error?: string
 }
 
 export interface CsvWriteResponse {
@@ -17,6 +26,17 @@ export interface CsvBackupResponse {
     ok: boolean
     error?: string
     backupPath?: string
+}
+
+export interface CsvCreateBackupRequest {
+    content: string
+}
+
+export interface CsvCreateBackupResponse {
+    ok: boolean
+    backupPath?: string
+    filename?: string
+    error?: string
 }
 
 export type AppConfig = Record<string, unknown>
@@ -71,6 +91,11 @@ export interface IpcInvokeMap {
         response: CsvFileDescriptor | null
     }
 
+    [IPC_CHANNELS.CSV_GET_WORKING]: {
+        request: void
+        response: CsvGetWorkingResponse
+    }
+
     [IPC_CHANNELS.CSV_OPEN_DIALOG]: {
         request: void
         response: CsvFileDescriptor | null
@@ -84,6 +109,11 @@ export interface IpcInvokeMap {
     [IPC_CHANNELS.CSV_BKP]: {
         request: string // CSV content
         response: CsvBackupResponse
+    }
+
+    [IPC_CHANNELS.CSV_CREATE_BACKUP]: {
+        request: CsvCreateBackupRequest
+        response: CsvCreateBackupResponse
     }
 
     [IPC_CHANNELS.SETTINGS_GET_QUICK_TITLES]: {
@@ -131,6 +161,26 @@ export interface IpcInvokeMap {
         response: string | null
     }
 
+    [IPC_CHANNELS.SETTINGS_GET_CSV_FILE]: {
+        request: void
+        response: CsvFileSettings
+    }
+
+    [IPC_CHANNELS.SETTINGS_SET_CSV_FILE]: {
+        request: CsvFileSettings
+        response: CsvFileSettings
+    }
+
+    [IPC_CHANNELS.SETTINGS_SELECT_WORKING_CSV]: {
+        request: void
+        response: string | null
+    }
+
+    [IPC_CHANNELS.SETTINGS_SELECT_BACKUP_FOLDER]: {
+        request: void
+        response: string | null
+    }
+
     [IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL]: {
         request: PhoneImageSaveFinalRequest
         response: PhoneImageSaveFinalResponse
@@ -160,9 +210,12 @@ export type IpcResponse<C extends IpcChannel> = IpcInvokeMap[C]['response']
 // Renderer-facing API shape
 export interface RendererApi {
     getLastCsv(): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_GET_LAST>>
+    getWorkingCsv(): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_GET_WORKING>>
+    /** @deprecated CSV selection now happens from Settings. */
     openCsvDialog(): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_OPEN_DIALOG>>
     writeCsv(content: IpcRequest<typeof IPC_CHANNELS.CSV_WRITE>): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_WRITE>>
     bkpCsv(content: IpcRequest<typeof IPC_CHANNELS.CSV_BKP>): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_BKP>>
+    createCsvBackup(request: IpcRequest<typeof IPC_CHANNELS.CSV_CREATE_BACKUP>): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_CREATE_BACKUP>>
 
     getQuickTitles(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_GET_QUICK_TITLES>>
     setQuickTitles(list: IpcRequest<typeof IPC_CHANNELS.SETTINGS_SET_QUICK_TITLES>): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SET_QUICK_TITLES>>
@@ -176,6 +229,10 @@ export interface RendererApi {
     getPhoneImageSettings(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_GET_PHONE_IMAGE>>
     setPhoneImageSettings(settings: IpcRequest<typeof IPC_CHANNELS.SETTINGS_SET_PHONE_IMAGE>): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SET_PHONE_IMAGE>>
     selectWorkPath(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SELECT_WORK_PATH>>
+    getCsvFileSettings(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_GET_CSV_FILE>>
+    setCsvFileSettings(settings: IpcRequest<typeof IPC_CHANNELS.SETTINGS_SET_CSV_FILE>): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SET_CSV_FILE>>
+    selectWorkingCsv(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SELECT_WORKING_CSV>>
+    selectBackupFolder(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SELECT_BACKUP_FOLDER>>
 
     saveFinalPhoneImage(request: IpcRequest<typeof IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL>): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL>>
     loadPhoneImageDataUrl(request: IpcRequest<typeof IPC_CHANNELS.PHONE_IMAGE_LOAD_DATA_URL>): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_LOAD_DATA_URL>>

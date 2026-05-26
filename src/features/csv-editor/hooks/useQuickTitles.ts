@@ -2,6 +2,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { settingsService } from '../services/settingsService'
 
+let cachedQuickTitles: string[] = []
+let hasLoadedQuickTitles = false
+
 /**
  * Hook pentru QuickTitles
  * - load la mount
@@ -9,17 +12,28 @@ import { settingsService } from '../services/settingsService'
  * - fără Electron direct
  */
 export function useQuickTitles() {
-    const [quickTitles, setQuickTitles] = useState<string[]>([])
-    const isLoadedRef = useRef(false)
+    const [quickTitles, setQuickTitlesState] = useState<string[]>(cachedQuickTitles)
+    const isLoadedRef = useRef(hasLoadedQuickTitles)
+
+    const setQuickTitles = useCallback((titles: string[] | ((prev: string[]) => string[])) => {
+        setQuickTitlesState((prev) => {
+            const next = typeof titles === 'function' ? titles(prev) : titles
+            cachedQuickTitles = next
+            return next
+        })
+    }, [])
 
     // ---- LOAD INITIAL + SUBSCRIBE ----
     useEffect(() => {
         const unsubscribe = settingsService.subscribeQuickTitles((titles) => {
+                hasLoadedQuickTitles = true
+                isLoadedRef.current = true
                 setQuickTitles(titles)
             })
 
         ;(async () => {
             const list = await settingsService.getQuickTitles()
+            hasLoadedQuickTitles = true
             setQuickTitles(list)
             isLoadedRef.current = true
         })()
@@ -27,7 +41,7 @@ export function useQuickTitles() {
         return () => {
             unsubscribe()
         }
-    }, [])
+    }, [setQuickTitles])
 
     // ---- ADD ----
     const addQuickTitle = useCallback(async (title: string) => {

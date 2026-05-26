@@ -11,6 +11,11 @@ import {
     FALLBACK_PHONE_IMAGE_SETTINGS,
     normalizePhoneImageSettings,
 } from '../src/features/csv-editor/domain/phoneImageSettings'
+import type { CsvFileSettings } from '../src/features/csv-editor/domain/csvFileSettings'
+import {
+    FALLBACK_CSV_FILE_SETTINGS,
+    normalizeCsvFileSettings,
+} from '../src/features/csv-editor/domain/csvFileSettings'
 
 export interface AppStoreSchema {
     quickTitles: string[]
@@ -18,6 +23,7 @@ export interface AppStoreSchema {
     appConfig: AppConfig
     defaultProjectSettings: DefaultProjectSettings
     phoneImageSettings: PhoneImageSettings
+    csvFileSettings: CsvFileSettings
 }
 
 const store = new Store<AppStoreSchema>({
@@ -27,6 +33,7 @@ const store = new Store<AppStoreSchema>({
         appConfig: {},
         defaultProjectSettings: FALLBACK_DEFAULT_PROJECT_SETTINGS,
         phoneImageSettings: FALLBACK_PHONE_IMAGE_SETTINGS,
+        csvFileSettings: FALLBACK_CSV_FILE_SETTINGS,
     },
 
 })
@@ -87,6 +94,18 @@ export function setPhoneImageSettings(settings: unknown): PhoneImageSettings {
     const safeSettings = normalizePhoneImageSettings(settings)
     // @ts-ignore
     store.set('phoneImageSettings', safeSettings)
+    return safeSettings
+}
+
+export function getCsvFileSettings(): CsvFileSettings {
+    // @ts-ignore
+    return normalizeCsvFileSettings(store.get('csvFileSettings'))
+}
+
+export function setCsvFileSettings(settings: unknown): CsvFileSettings {
+    const safeSettings = normalizeCsvFileSettings(settings)
+    // @ts-ignore
+    store.set('csvFileSettings', safeSettings)
     return safeSettings
 }
 

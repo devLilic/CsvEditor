@@ -9,6 +9,11 @@ export const electronApi: RendererApi = {
         return ipcRenderer.invoke(IPC_CHANNELS.CSV_GET_LAST)
     },
 
+    getWorkingCsv() {
+        return ipcRenderer.invoke(IPC_CHANNELS.CSV_GET_WORKING)
+    },
+
+    // Legacy: CSV selection now happens from Settings.
     openCsvDialog() {
         return ipcRenderer.invoke(IPC_CHANNELS.CSV_OPEN_DIALOG)
     },
@@ -19,6 +24,10 @@ export const electronApi: RendererApi = {
 
     bkpCsv(content) {
         return ipcRenderer.invoke(IPC_CHANNELS.CSV_BKP, content)
+    },
+
+    createCsvBackup(request) {
+        return ipcRenderer.invoke(IPC_CHANNELS.CSV_CREATE_BACKUP, request)
     },
 
     getQuickTitles() {
@@ -55,6 +64,22 @@ export const electronApi: RendererApi = {
 
     selectWorkPath() {
         return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SELECT_WORK_PATH)
+    },
+
+    getCsvFileSettings() {
+        return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET_CSV_FILE)
+    },
+
+    setCsvFileSettings(settings) {
+        return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SET_CSV_FILE, settings)
+    },
+
+    selectWorkingCsv() {
+        return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SELECT_WORKING_CSV)
+    },
+
+    selectBackupFolder() {
+        return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SELECT_BACKUP_FOLDER)
     },
 
     saveFinalPhoneImage(request) {

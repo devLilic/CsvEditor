@@ -1,5 +1,11 @@
 // src/features/csv-editor/services/csvService.ts
-import type { CsvFileDescriptor, CsvWriteResponse, CsvBackupResponse } from '@/shared/ipc-types'
+import type {
+    CsvBackupResponse,
+    CsvCreateBackupResponse,
+    CsvFileDescriptor,
+    CsvGetWorkingResponse,
+    CsvWriteResponse,
+} from '@/shared/ipc-types'
 
 /**
  * Accessor lazy pentru preload API.
@@ -34,6 +40,10 @@ export const csvService = {
     /**
      * Încarcă ultimul CSV salvat (dacă există)
      */
+    /**
+     * @deprecated Legacy fallback for the old dialog-based CSV flow.
+     * New code should use getWorkingCsv(), which reads workingCsvPath from Settings.
+     */
     async getLast(): Promise<CsvFileDescriptor | null> {
         try {
             const res = await getApi().getLastCsv()
@@ -43,8 +53,33 @@ export const csvService = {
         }
     },
 
+    async getWorkingCsv(): Promise<CsvGetWorkingResponse> {
+        try {
+            const res = await getApi().getWorkingCsv()
+            return res ?? { ok: false, error: 'NO_RESPONSE' }
+        } catch {
+            return { ok: false, error: 'IPC_FAILED' }
+        }
+    },
+
+    async getWorking(): Promise<CsvFileDescriptor | null> {
+        const res = await this.getWorkingCsv()
+        if (!res.ok || typeof res.content !== 'string' || typeof res.path !== 'string') {
+            return null
+        }
+
+        return {
+            path: res.path,
+            content: res.content,
+        }
+    },
+
     /**
      * Deschide dialog pentru selectare CSV
+     */
+    /**
+     * @deprecated Legacy dialog-based CSV selection.
+     * The official flow is Settings -> workingCsvPath -> getWorkingCsv/write.
      */
     async openDialog(): Promise<CsvFileDescriptor | null> {
         try {
@@ -81,6 +116,22 @@ export const csvService = {
 
         try {
             const res = await getApi().bkpCsv(content)
+            return res ?? { ok: false, error: 'NO_RESPONSE' }
+        } catch {
+            return { ok: false, error: 'IPC_FAILED' }
+        }
+    },
+
+    /**
+     * Creeaza backup in folderul configurat in setarile CSV.
+     */
+    async createBackup(content: string): Promise<CsvCreateBackupResponse> {
+        if (typeof content !== 'string') {
+            return { ok: false, error: 'INVALID_CONTENT' }
+        }
+
+        try {
+            const res = await getApi().createCsvBackup({ content })
             return res ?? { ok: false, error: 'NO_RESPONSE' }
         } catch {
             return { ok: false, error: 'IPC_FAILED' }
