@@ -4,14 +4,12 @@ import { serializeCsv } from './csvSerializer'
 import type { EntitiesState } from '../domain/entities'
 
 const importantColumns = [
+    CSV_COLUMNS.TITLE_NR,
     CSV_COLUMNS.TITLE,
     CSV_COLUMNS.PERSON_NAME,
     CSV_COLUMNS.PERSON_OCCUPATION,
     CSV_COLUMNS.IMAGE,
     CSV_COLUMNS.LOCATION,
-    CSV_COLUMNS.HOT_TITLE,
-    CSV_COLUMNS.WAIT_TITLE,
-    CSV_COLUMNS.WAIT_LOCATION,
 ]
 
 describe('serializeCsv', () => {
@@ -31,6 +29,29 @@ describe('serializeCsv', () => {
         for (const column of importantColumns) {
             expect(columns).toContain(column)
         }
+        expect(columns).not.toContain(CSV_COLUMNS.HOT_TITLE)
+        expect(columns).not.toContain(CSV_COLUMNS.WAIT_TITLE)
+        expect(columns).not.toContain(CSV_COLUMNS.WAIT_LOCATION)
+    })
+
+    it('writes section markers only in the Nr column', () => {
+        const state: EntitiesState = {
+            sections: [
+                {
+                    id: 'invited-1',
+                    kind: 'invited',
+                    rows: [],
+                },
+            ],
+        }
+
+        const serialized = serializeCsv(state)
+        const [headerRow, markerRow] = serialized.split(/\r?\n/)
+        const columns = headerRow.split(';')
+        const cells = markerRow.split(';')
+
+        expect(cells[columns.indexOf(CSV_COLUMNS.TITLE_NR)]).toBe('--- INVITATI ---')
+        expect(cells[columns.indexOf(CSV_COLUMNS.TITLE)]).toBe('')
     })
 
     it('preserves supported values and does not regenerate hot or wait data', () => {

@@ -4,12 +4,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EditorHeader } from './EditorHeader'
 import { useWorkingCsvInfo } from '@/features/csv-editor/hooks/useWorkingCsvInfo'
 
-const startNewProjectMock = vi.fn()
-const setTitleFilterMock = vi.fn()
+const {
+    startNewProjectMock,
+    forceStartNewProjectWithoutBackupMock,
+    setTitleFilterMock,
+    dispatchMock,
+    listSavedProjectsMock,
+    saveCurrentAsProjectMock,
+    loadProjectIntoWorkingCsvMock,
+    deleteSavedProjectMock,
+} = vi.hoisted(() => ({
+    startNewProjectMock: vi.fn(),
+    forceStartNewProjectWithoutBackupMock: vi.fn(),
+    setTitleFilterMock: vi.fn(),
+    dispatchMock: vi.fn(),
+    listSavedProjectsMock: vi.fn(),
+    saveCurrentAsProjectMock: vi.fn(),
+    loadProjectIntoWorkingCsvMock: vi.fn(),
+    deleteSavedProjectMock: vi.fn(),
+}))
 
 vi.mock('@/features/csv-editor', () => ({
     useEntities: () => ({
         startNewProject: startNewProjectMock,
+        forceStartNewProjectWithoutBackup: forceStartNewProjectWithoutBackupMock,
     }),
 }))
 
@@ -28,6 +46,39 @@ vi.mock('@/ui/components/EditModeToggle', () => ({
     EditModeToggle: () => <button>Edit Mode OFF</button>,
 }))
 
+vi.mock('@/features/csv-editor/context/CsvContext', () => ({
+    useCsvContext: () => ({
+        state: {
+            entities: {
+                sections: [
+                    {
+                        id: 'current-section',
+                        kind: 'invited',
+                        rows: [
+                            {
+                                id: 'current-row',
+                                title: { id: 'current-title', title: 'CURRENT TITLE' },
+                                person: { id: 'current-person', name: 'CURRENT NAME', occupation: 'CURRENT ROLE' },
+                                location: { id: 'current-location', location: 'CURRENT LOCATION' },
+                            },
+                        ],
+                    },
+                ],
+            },
+        },
+        dispatch: dispatchMock,
+    }),
+}))
+
+vi.mock('@/features/csv-editor/services/savedProjectsService', () => ({
+    savedProjectsService: {
+        listSavedProjects: listSavedProjectsMock,
+        saveCurrentAsProject: saveCurrentAsProjectMock,
+        loadProjectIntoWorkingCsv: loadProjectIntoWorkingCsvMock,
+        deleteSavedProject: deleteSavedProjectMock,
+    },
+}))
+
 vi.mock('@/features/csv-editor/hooks/useWorkingCsvInfo', () => ({
     useWorkingCsvInfo: vi.fn(),
 }))
@@ -35,8 +86,28 @@ vi.mock('@/features/csv-editor/hooks/useWorkingCsvInfo', () => ({
 describe('EditorHeader', () => {
     beforeEach(() => {
         startNewProjectMock.mockClear()
+        forceStartNewProjectWithoutBackupMock.mockClear()
         setTitleFilterMock.mockClear()
+        dispatchMock.mockClear()
+        listSavedProjectsMock.mockClear()
+        saveCurrentAsProjectMock.mockClear()
+        loadProjectIntoWorkingCsvMock.mockClear()
+        deleteSavedProjectMock.mockClear()
         startNewProjectMock.mockResolvedValue({ ok: true })
+        forceStartNewProjectWithoutBackupMock.mockResolvedValue({ ok: true })
+        listSavedProjectsMock.mockResolvedValue({
+            ok: true,
+            files: [
+                {
+                    filename: 'Emisiunea_1.csv',
+                    fullPath: 'C:/saved/Emisiunea_1.csv',
+                    mtimeMs: 2,
+                },
+            ],
+        })
+        saveCurrentAsProjectMock.mockResolvedValue({ ok: true, filename: 'Manual.csv', fullPath: 'C:/saved/Manual.csv' })
+        loadProjectIntoWorkingCsvMock.mockResolvedValue({ ok: true, content: 'loaded,csv,content' })
+        deleteSavedProjectMock.mockResolvedValue({ ok: true })
         vi.mocked(useWorkingCsvInfo).mockReturnValue({
             filename: 'emisie.csv',
             path: 'C:/work/emisie.csv',
@@ -103,11 +174,23 @@ describe('EditorHeader', () => {
         expect(startNewProjectMock).toHaveBeenCalledTimes(1)
     })
 
-    it('shows an inline backup error when starting a new project fails during backup', async () => {
+    it('does not show backup failed dialog when startNewProject succeeds', async () => {
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: /Proiect nou/i }))
+        await user.click(screen.getByRole('button', { name: /Confirm/i }))
+
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(forceStartNewProjectWithoutBackupMock).not.toHaveBeenCalled()
+    })
+
+    it('opens backup failed dialog when starting a new project fails during backup', async () => {
         const user = userEvent.setup()
         startNewProjectMock.mockResolvedValueOnce({
             ok: false,
-            error: 'Backup failed: No backup folder configured',
+            reason: 'BACKUP_FAILED',
+            error: 'No backup folder configured',
         })
 
         render(<EditorHeader />)
@@ -115,8 +198,103 @@ describe('EditorHeader', () => {
         await user.click(screen.getByRole('button', { name: /Proiect nou/i }))
         await user.click(screen.getByRole('button', { name: /Confirm/i }))
 
-        expect(await screen.findByRole('alert')).toHaveTextContent(
-            'Backup CSV nu a putut fi creat. Proiectul nu a fost resetat. Verifica folderul de backup din Setari.'
-        )
+        expect(await screen.findByRole('dialog')).toHaveTextContent('Backup CSV nu a putut fi creat.')
+        expect(screen.getByText(/Proiectul curent nu a fost resetat/)).toBeInTheDocument()
+        expect(screen.getByText('No backup folder configured')).toBeInTheDocument()
+        expect(forceStartNewProjectWithoutBackupMock).not.toHaveBeenCalled()
+    })
+
+    it('lets the user return from backup failed dialog without forcing reset', async () => {
+        const user = userEvent.setup()
+        startNewProjectMock.mockResolvedValueOnce({
+            ok: false,
+            reason: 'BACKUP_FAILED',
+            error: 'No backup folder configured',
+        })
+
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: /Proiect nou/i }))
+        await user.click(screen.getByRole('button', { name: /Confirm/i }))
+        await user.click(await screen.findByRole('button', { name: 'Revino' }))
+
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(forceStartNewProjectWithoutBackupMock).not.toHaveBeenCalled()
+    })
+
+    it('continues without backup when the user confirms the backup failed dialog', async () => {
+        const user = userEvent.setup()
+        startNewProjectMock.mockResolvedValueOnce({
+            ok: false,
+            reason: 'BACKUP_FAILED',
+            error: 'No backup folder configured',
+        })
+
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: /Proiect nou/i }))
+        await user.click(screen.getByRole('button', { name: /Confirm/i }))
+        await user.click(await screen.findByRole('button', { name: 'Continuă fără backup' }))
+
+        expect(forceStartNewProjectWithoutBackupMock).toHaveBeenCalledTimes(1)
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('opens saved projects modal from the header', async () => {
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Proiecte salvate' }))
+
+        expect(await screen.findByRole('dialog')).toHaveTextContent('Proiecte salvate')
+        expect(listSavedProjectsMock).toHaveBeenCalledOnce()
+    })
+
+    it('shows the saved projects button', () => {
+        render(<EditorHeader />)
+
+        expect(screen.getByRole('button', { name: 'Proiecte salvate' })).toBeInTheDocument()
+    })
+
+    it('dispatches CSV_LOADED when a saved project is loaded', async () => {
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Proiecte salvate' }))
+        await screen.findByText('Emisiunea_1.csv')
+        await user.click(screen.getByRole('button', { name: 'Încarcă în CSV-ul de lucru' }))
+        await user.click(screen.getByRole('button', { name: 'Încarcă' }))
+
+        expect(loadProjectIntoWorkingCsvMock).toHaveBeenCalledWith({
+            filename: 'Emisiunea_1.csv',
+        })
+        expect(dispatchMock).toHaveBeenCalledWith({
+            type: 'CSV_LOADED',
+            payload: expect.any(Object),
+        })
+    })
+
+    it('passes the current serialized CSV content to the modal save flow', async () => {
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Proiecte salvate' }))
+        await user.type(await screen.findByLabelText(/Salvează proiectul curent ca/i), 'Manual')
+        await user.click(screen.getByRole('button', { name: 'Salvează' }))
+
+        expect(saveCurrentAsProjectMock).toHaveBeenCalledWith({
+            filename: 'Manual',
+            content: expect.stringContaining('CURRENT TITLE'),
+        })
+    })
+
+    it('does not show backup files in the saved projects modal', async () => {
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Proiecte salvate' }))
+
+        expect(await screen.findByText('Emisiunea_1.csv')).toBeInTheDocument()
+        expect(screen.queryByText(/backup/i)).not.toBeInTheDocument()
     })
 })

@@ -39,7 +39,68 @@ export interface CsvCreateBackupResponse {
     error?: string
 }
 
+export interface CsvProjectFileInfo {
+    filename: string
+    fullPath: string
+    mtimeMs: number
+}
+
+export interface CsvProjectListResponse {
+    ok: boolean
+    files: CsvProjectFileInfo[]
+    error?: string
+}
+
+export interface CsvProjectSaveAsRequest {
+    filename: string
+    content: string
+}
+
+export interface CsvProjectSaveAsResponse {
+    ok: boolean
+    filename?: string
+    fullPath?: string
+    error?: string
+}
+
+export interface CsvProjectLoadIntoWorkingRequest {
+    filename: string
+}
+
+export interface CsvProjectLoadIntoWorkingResponse {
+    ok: boolean
+    content?: string
+    error?: string
+}
+
+export interface CsvProjectDeleteRequest {
+    filename: string
+}
+
+export interface CsvProjectDeleteResponse {
+    ok: boolean
+    error?: string
+}
+
 export type AppConfig = Record<string, unknown>
+
+export type UpdateStatus =
+    | { type: 'idle'; currentVersion: string }
+    | { type: 'checking'; currentVersion: string }
+    | { type: 'available'; currentVersion: string; newVersion: string; releaseNotes?: string }
+    | { type: 'not-available'; currentVersion: string }
+    | { type: 'downloading'; percent: number; transferred?: number; total?: number }
+    | { type: 'downloaded'; newVersion?: string }
+    | { type: 'error'; message: string }
+
+export type UpdateCheckResult =
+    | { ok: true; status: 'available'; currentVersion: string; newVersion: string; releaseNotes?: string }
+    | { ok: true; status: 'not-available'; currentVersion: string }
+    | { ok: false; error: string }
+
+export type UpdateDownloadResult =
+    | { ok: true }
+    | { ok: false; error: string }
 
 export interface PhoneImageSaveFinalRequest {
     filename: string
@@ -116,6 +177,26 @@ export interface IpcInvokeMap {
         response: CsvCreateBackupResponse
     }
 
+    [IPC_CHANNELS.CSV_PROJECT_LIST]: {
+        request: void
+        response: CsvProjectListResponse
+    }
+
+    [IPC_CHANNELS.CSV_PROJECT_SAVE_AS]: {
+        request: CsvProjectSaveAsRequest
+        response: CsvProjectSaveAsResponse
+    }
+
+    [IPC_CHANNELS.CSV_PROJECT_LOAD_INTO_WORKING]: {
+        request: CsvProjectLoadIntoWorkingRequest
+        response: CsvProjectLoadIntoWorkingResponse
+    }
+
+    [IPC_CHANNELS.CSV_PROJECT_DELETE]: {
+        request: CsvProjectDeleteRequest
+        response: CsvProjectDeleteResponse
+    }
+
     [IPC_CHANNELS.SETTINGS_GET_QUICK_TITLES]: {
         request: void
         response: string[]
@@ -181,6 +262,11 @@ export interface IpcInvokeMap {
         response: string | null
     }
 
+    [IPC_CHANNELS.SETTINGS_SELECT_SAVED_PROJECTS_FOLDER]: {
+        request: void
+        response: string | null
+    }
+
     [IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL]: {
         request: PhoneImageSaveFinalRequest
         response: PhoneImageSaveFinalResponse
@@ -200,6 +286,26 @@ export interface IpcInvokeMap {
         request: PhoneImageGetImageDataUrlRequest
         response: PhoneImageGetImageDataUrlResponse
     }
+
+    [IPC_CHANNELS.UPDATE_GET_CURRENT_VERSION]: {
+        request: void
+        response: string
+    }
+
+    [IPC_CHANNELS.UPDATE_CHECK]: {
+        request: void
+        response: UpdateCheckResult
+    }
+
+    [IPC_CHANNELS.UPDATE_DOWNLOAD]: {
+        request: void
+        response: UpdateDownloadResult
+    }
+
+    [IPC_CHANNELS.UPDATE_INSTALL]: {
+        request: void
+        response: void
+    }
 }
 
 export type IpcChannel = keyof IpcInvokeMap
@@ -216,6 +322,10 @@ export interface RendererApi {
     writeCsv(content: IpcRequest<typeof IPC_CHANNELS.CSV_WRITE>): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_WRITE>>
     bkpCsv(content: IpcRequest<typeof IPC_CHANNELS.CSV_BKP>): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_BKP>>
     createCsvBackup(request: IpcRequest<typeof IPC_CHANNELS.CSV_CREATE_BACKUP>): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_CREATE_BACKUP>>
+    listSavedCsvProjects(): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_PROJECT_LIST>>
+    saveCsvProjectAs(request: IpcRequest<typeof IPC_CHANNELS.CSV_PROJECT_SAVE_AS>): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_PROJECT_SAVE_AS>>
+    loadCsvProjectIntoWorking(request: IpcRequest<typeof IPC_CHANNELS.CSV_PROJECT_LOAD_INTO_WORKING>): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_PROJECT_LOAD_INTO_WORKING>>
+    deleteCsvProject(request: IpcRequest<typeof IPC_CHANNELS.CSV_PROJECT_DELETE>): Promise<IpcResponse<typeof IPC_CHANNELS.CSV_PROJECT_DELETE>>
 
     getQuickTitles(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_GET_QUICK_TITLES>>
     setQuickTitles(list: IpcRequest<typeof IPC_CHANNELS.SETTINGS_SET_QUICK_TITLES>): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SET_QUICK_TITLES>>
@@ -233,11 +343,20 @@ export interface RendererApi {
     setCsvFileSettings(settings: IpcRequest<typeof IPC_CHANNELS.SETTINGS_SET_CSV_FILE>): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SET_CSV_FILE>>
     selectWorkingCsv(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SELECT_WORKING_CSV>>
     selectBackupFolder(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SELECT_BACKUP_FOLDER>>
+    selectSavedProjectsFolder(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SELECT_SAVED_PROJECTS_FOLDER>>
 
     saveFinalPhoneImage(request: IpcRequest<typeof IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL>): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL>>
     loadPhoneImageDataUrl(request: IpcRequest<typeof IPC_CHANNELS.PHONE_IMAGE_LOAD_DATA_URL>): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_LOAD_DATA_URL>>
     listWorkPathImages(): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_LIST_WORK_PATH_IMAGES>>
     getPhoneImageDataUrl(request: IpcRequest<typeof IPC_CHANNELS.PHONE_IMAGE_GET_IMAGE_DATA_URL>): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_GET_IMAGE_DATA_URL>>
+
+    appUpdate: {
+        getCurrentVersion(): Promise<IpcResponse<typeof IPC_CHANNELS.UPDATE_GET_CURRENT_VERSION>>
+        checkForUpdates(): Promise<IpcResponse<typeof IPC_CHANNELS.UPDATE_CHECK>>
+        downloadUpdate(): Promise<IpcResponse<typeof IPC_CHANNELS.UPDATE_DOWNLOAD>>
+        installUpdate(): Promise<void>
+        onStatus(callback: (status: UpdateStatus) => void): () => void
+    }
 
     onMenuNavigate(callback: (route: string) => void): () => void
 }

@@ -10,7 +10,7 @@ import { settingsService } from '../services/settingsService'
 
 function StartNewProjectHarness() {
     const { dispatch } = useCsvContext()
-    const { startNewProject, getBlockItems, activeSectionId } = useEntities()
+    const { startNewProject, forceStartNewProjectWithoutBackup, getBlockItems, activeSectionId } = useEntities()
     const sectionId = activeSectionId ?? 'old-section'
     const titles = getBlockItems(sectionId, 'titles')
     const persons = getBlockItems(sectionId, 'persons')
@@ -48,6 +48,14 @@ function StartNewProjectHarness() {
                 }}
             >
                 start new project
+            </button>
+            <button
+                onClick={async () => {
+                    const result = await forceStartNewProjectWithoutBackup()
+                    window.dispatchEvent(new CustomEvent('force-start-new-project-result', { detail: result }))
+                }}
+            >
+                force start new project
             </button>
             <div data-testid="title">{titles[0]?.data.title ?? ''}</div>
             <div data-testid="person-name">{persons[0]?.data.name ?? ''}</div>
@@ -192,8 +200,53 @@ describe('useEntities startNewProject', () => {
         expect(screen.getByTestId('location')).toHaveTextContent('OLD LOCATION')
         expect(resultSpy).toHaveBeenCalledWith({
             ok: false,
-            error: 'Backup failed: BACKUP_FAILED',
+            reason: 'BACKUP_FAILED',
+            error: 'BACKUP_FAILED',
         })
+    })
+
+    it('force starts a new project without creating backup', async () => {
+        const user = userEvent.setup()
+        const savedSettings = {
+            title: 'FORCED DEFAULT TITLE',
+            personName: 'FORCED DEFAULT NAME',
+            personOccupation: 'FORCED DEFAULT ROLE',
+            location: 'FORCED DEFAULT LOCATION',
+        }
+        const backupSpy = vi.spyOn(csvService, 'createBackup').mockResolvedValue({ ok: false, error: 'BACKUP_FAILED' })
+        const writeSpy = vi.spyOn(csvService, 'write').mockResolvedValue({ ok: true })
+        vi.spyOn(defaultProjectSettingsService, 'getDefaultProjectSettings').mockResolvedValue(savedSettings)
+        const resultSpy = vi.fn()
+        window.addEventListener('force-start-new-project-result', ((event: CustomEvent) => {
+            resultSpy(event.detail)
+        }) as EventListener)
+
+        render(
+            <CsvProvider>
+                <StartNewProjectHarness />
+            </CsvProvider>
+        )
+
+        await user.click(screen.getByRole('button', { name: 'seed old data' }))
+        await user.click(screen.getByRole('button', { name: 'force start new project' }))
+
+        await waitFor(() => {
+            expect(screen.getByTestId('title')).toHaveTextContent(savedSettings.title)
+        })
+
+        expect(screen.getByTestId('person-name')).toHaveTextContent(savedSettings.personName)
+        expect(screen.getByTestId('person-occupation')).toHaveTextContent(savedSettings.personOccupation)
+        expect(screen.getByTestId('location')).toHaveTextContent(savedSettings.location)
+        expect(backupSpy).not.toHaveBeenCalled()
+        expect(writeSpy).toHaveBeenCalledTimes(1)
+        const writtenCsv = writeSpy.mock.calls[0][0]
+        expect(writtenCsv).toContain(savedSettings.title)
+        expect(writtenCsv).toContain(savedSettings.personName)
+        expect(writtenCsv).toContain(savedSettings.personOccupation)
+        expect(writtenCsv).toContain(savedSettings.location)
+        expect(writtenCsv).not.toContain('OLD TITLE')
+        expect(writtenCsv).not.toContain('OLD NAME')
+        expect(resultSpy).toHaveBeenCalledWith({ ok: true })
     })
 
     it('uses fallback settings when default project settings cannot be read', async () => {

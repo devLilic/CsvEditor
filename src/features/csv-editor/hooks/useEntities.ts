@@ -18,7 +18,12 @@ type BlockItem =
 
 export type StartNewProjectResult =
     | { ok: true }
-    | { ok: false; error: string }
+    | { ok: false; reason: 'BACKUP_FAILED'; error?: string }
+    | { ok: false; reason: 'RESET_FAILED'; error?: string }
+
+export type ForceStartNewProjectWithoutBackupResult =
+    | { ok: true }
+    | { ok: false; error?: string }
 
 function rowsToBlockItems(section: CsvSection, entityType: EntityType): BlockItem[] {
     const out: BlockItem[] = []
@@ -116,29 +121,7 @@ export function useEntities() {
         [dispatch]
     )
 
-    // -------- START NEW PROJECT (CANONICAL) --------
-    /**
-     * Start a new project:
-     * 1) serialize current CSV
-     * 2) backup current CSV
-     * 3) read saved default project settings
-     * 4) build default project entities
-     * 5) reset entities -> default project seed
-     * 6) write default project CSV (so disk matches state)
-     */
-    const startNewProject = useCallback(async (): Promise<StartNewProjectResult> => {
-        // 1) serialize and 2) backup current CSV before any reset/write.
-        const currentCsv = serializeCsv(state.entities)
-        const backupRes = await csvService.createBackup(currentCsv)
-        if (!backupRes.ok) {
-            console.error('Backup failed:', backupRes.error)
-            return {
-                ok: false,
-                error: `Backup failed: ${backupRes.error ?? 'UNKNOWN_ERROR'}`,
-            }
-        }
-
-        // 3) read settings and 4) build default project entities
+    const resetToDefaultProject = useCallback(async (): Promise<ForceStartNewProjectWithoutBackupResult> => {
         const defaultProjectSettings = await defaultProjectSettingsService
             .getDefaultProjectSettings()
             .catch((error) => {
@@ -147,13 +130,11 @@ export function useEntities() {
             })
         const nextEntities = createDefaultProjectEntities(defaultProjectSettings)
 
-        // QuickTitles belong to the current project workflow; clear them after backup succeeds.
+        // QuickTitles belong to the current project workflow; clear them after backup succeeds or explicit override.
         await settingsService.setQuickTitles([])
 
-        // 5) reset reducer state
         dispatch({ type: 'ENTITY_CLEAR_ALL', payload: nextEntities })
 
-        // 6) write default project CSV
         const defaultProjectCsv = serializeCsv(nextEntities)
         const writeRes = await csvService.write(defaultProjectCsv)
         if (!writeRes.ok) {
@@ -165,7 +146,45 @@ export function useEntities() {
         }
 
         return { ok: true }
-    }, [dispatch, state.entities])
+    }, [dispatch])
+
+    // -------- START NEW PROJECT (CANONICAL) --------
+    /**
+     * Start a new project:
+     * 1) serialize current CSV
+     * 2) backup current CSV
+     * 3) if backup succeeds, reset entities -> default project seed
+     * 4) write default project CSV (so disk matches state)
+     */
+    const startNewProject = useCallback(async (): Promise<StartNewProjectResult> => {
+        // 1) serialize and 2) backup current CSV before any reset/write.
+        const currentCsv = serializeCsv(state.entities)
+        const backupRes = await csvService.createBackup(currentCsv)
+        if (!backupRes.ok) {
+            console.error('Backup failed:', backupRes.error)
+            return {
+                ok: false,
+                reason: 'BACKUP_FAILED',
+                error: backupRes.error ?? 'UNKNOWN_ERROR',
+            }
+        }
+
+        const resetRes = await resetToDefaultProject()
+        if (!resetRes.ok) {
+            return {
+                ok: false,
+                reason: 'RESET_FAILED',
+                error: resetRes.error,
+            }
+        }
+
+        return { ok: true }
+    }, [resetToDefaultProject, state.entities])
+
+    const forceStartNewProjectWithoutBackup = useCallback(
+        async (): Promise<ForceStartNewProjectWithoutBackupResult> => resetToDefaultProject(),
+        [resetToDefaultProject]
+    )
 
     return {
         // state
@@ -193,6 +212,7 @@ export function useEntities() {
 
         // global ops
         startNewProject,
+        forceStartNewProjectWithoutBackup,
         // Legacy alias kept temporarily for old consumers. New code should use startNewProject.
         clearAll: startNewProject,
     }

@@ -50,4 +50,13 @@ export const csvFileSettingsService = {
             return null
         }
     },
+
+    async selectSavedProjectsFolder(): Promise<string | null> {
+        try {
+            const selectedPath = await getApi().selectSavedProjectsFolder()
+            return typeof selectedPath === 'string' ? selectedPath : null
+        } catch {
+            return null
+        }
+    },
 }

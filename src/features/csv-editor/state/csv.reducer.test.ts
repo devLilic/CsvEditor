@@ -53,6 +53,37 @@ describe('csvReducer - CSV_LOADED', () => {
         expect(nextState.entities.sections.some((section) => section.kind === 'invited')).toBe(true)
         expect(nextState.entities.sections.at(-1)?.kind).toBe('invited')
     })
+
+    it('activates invited section when previous active section no longer exists', () => {
+        const state = stateWithSections([betaSection(), invitedSection()], 'old-section-id')
+        const nextInvited = invitedSection({ id: 'new-invited-id' })
+        const nextState = csvReducer(state, {
+            type: 'CSV_LOADED',
+            payload: {
+                sections: [
+                    betaSection({ id: 'new-beta-id' }),
+                    nextInvited,
+                ],
+            },
+        })
+
+        expect(nextState.activeSectionId).toBe(nextInvited.id)
+    })
+
+    it('keeps previous active section when it still exists after CSV_LOADED', () => {
+        const state = stateWithSections([betaSection(), invitedSection()], 'beta-1')
+        const nextState = csvReducer(state, {
+            type: 'CSV_LOADED',
+            payload: {
+                sections: [
+                    betaSection({ id: 'beta-1' }),
+                    invitedSection(),
+                ],
+            },
+        })
+
+        expect(nextState.activeSectionId).toBe('beta-1')
+    })
 })
 
 describe('csvReducer - sections', () => {

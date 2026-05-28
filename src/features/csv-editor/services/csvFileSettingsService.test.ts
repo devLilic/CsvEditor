@@ -8,13 +8,28 @@ describe('csvFileSettingsService', () => {
         const settings = {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
+            savedProjectsFolderPath: 'C:/work/saved-projects',
         }
         api.getCsvFileSettings.mockResolvedValueOnce(settings)
 
         const result = await csvFileSettingsService.getCsvFileSettings()
 
         expect(result).toEqual(settings)
+        expect(result.savedProjectsFolderPath).toBe('C:/work/saved-projects')
         expect(api.getCsvFileSettings).toHaveBeenCalledOnce()
+    })
+
+    it('getCsvFileSettings returns savedProjectsFolderPath from IPC', async () => {
+        const api = (window as any).electronAPI
+        api.getCsvFileSettings.mockResolvedValueOnce({
+            workingCsvPath: 'C:/work/current.csv',
+            backupFolderPath: 'C:/work/backups',
+            savedProjectsFolderPath: 'D:/projects/saved',
+        })
+
+        const result = await csvFileSettingsService.getCsvFileSettings()
+
+        expect(result.savedProjectsFolderPath).toBe('D:/projects/saved')
     })
 
     it('getCsvFileSettings returns fallback when IPC fails', async () => {
@@ -31,6 +46,7 @@ describe('csvFileSettingsService', () => {
         const settings = {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
+            savedProjectsFolderPath: 'C:/work/saved-projects',
         }
         api.setCsvFileSettings.mockResolvedValueOnce(settings)
 
@@ -38,6 +54,38 @@ describe('csvFileSettingsService', () => {
 
         expect(result).toEqual(settings)
         expect(api.setCsvFileSettings).toHaveBeenCalledWith(settings)
+    })
+
+    it('setCsvFileSettings saves savedProjectsFolderPath', async () => {
+        const api = (window as any).electronAPI
+        const settings = {
+            workingCsvPath: 'C:/work/current.csv',
+            backupFolderPath: 'C:/work/backups',
+            savedProjectsFolderPath: 'D:/projects/saved',
+        }
+        api.setCsvFileSettings.mockResolvedValueOnce(settings)
+
+        const result = await csvFileSettingsService.setCsvFileSettings(settings)
+
+        expect(api.setCsvFileSettings).toHaveBeenCalledWith({
+            workingCsvPath: 'C:/work/current.csv',
+            backupFolderPath: 'C:/work/backups',
+            savedProjectsFolderPath: 'D:/projects/saved',
+        })
+        expect(result.savedProjectsFolderPath).toBe('D:/projects/saved')
+    })
+
+    it('setCsvFileSettings returns fallback when IPC fails', async () => {
+        const api = (window as any).electronAPI
+        api.setCsvFileSettings.mockRejectedValueOnce(new Error('store error'))
+
+        const result = await csvFileSettingsService.setCsvFileSettings({
+            workingCsvPath: 'C:/work/current.csv',
+            backupFolderPath: 'C:/work/backups',
+            savedProjectsFolderPath: 'C:/work/saved-projects',
+        })
+
+        expect(result).toEqual(FALLBACK_CSV_FILE_SETTINGS)
     })
 
     it('selectWorkingCsv returns path or null', async () => {
@@ -60,5 +108,23 @@ describe('csvFileSettingsService', () => {
         await expect(csvFileSettingsService.selectBackupFolder()).resolves.toBe('C:/work/backups')
         await expect(csvFileSettingsService.selectBackupFolder()).resolves.toBeNull()
         expect(api.selectBackupFolder).toHaveBeenCalledTimes(2)
+    })
+
+    it('selectSavedProjectsFolder returns path or null', async () => {
+        const api = (window as any).electronAPI
+        api.selectSavedProjectsFolder
+            .mockResolvedValueOnce('C:/work/saved-projects')
+            .mockResolvedValueOnce(null)
+
+        await expect(csvFileSettingsService.selectSavedProjectsFolder()).resolves.toBe('C:/work/saved-projects')
+        await expect(csvFileSettingsService.selectSavedProjectsFolder()).resolves.toBeNull()
+        expect(api.selectSavedProjectsFolder).toHaveBeenCalledTimes(2)
+    })
+
+    it('selectSavedProjectsFolder returns null when IPC fails', async () => {
+        const api = (window as any).electronAPI
+        api.selectSavedProjectsFolder.mockRejectedValueOnce(new Error('dialog error'))
+
+        await expect(csvFileSettingsService.selectSavedProjectsFolder()).resolves.toBeNull()
     })
 })

@@ -37,6 +37,7 @@ vi.mock('@/features/csv-editor/services/csvFileSettingsService', () => ({
         setCsvFileSettings: vi.fn(),
         selectWorkingCsv: vi.fn(),
         selectBackupFolder: vi.fn(),
+        selectSavedProjectsFolder: vi.fn(),
     },
 }))
 
@@ -56,6 +57,7 @@ const savedPhoneImageSettings: PhoneImageSettings = {
 const savedCsvFileSettings: CsvFileSettings = {
     workingCsvPath: 'C:/work/current.csv',
     backupFolderPath: 'C:/work/backups',
+    savedProjectsFolderPath: 'C:/work/saved-projects',
 }
 
 function renderPage() {
@@ -80,6 +82,7 @@ describe('DefaultProjectSettingsPage', () => {
         vi.mocked(csvFileSettingsService.setCsvFileSettings).mockImplementation(async (settings) => settings)
         vi.mocked(csvFileSettingsService.selectWorkingCsv).mockResolvedValue('C:/selected/selected.csv')
         vi.mocked(csvFileSettingsService.selectBackupFolder).mockResolvedValue('C:/selected/backups')
+        vi.mocked(csvFileSettingsService.selectSavedProjectsFolder).mockResolvedValue('C:/selected/saved-projects')
     })
 
     afterEach(() => {
@@ -114,8 +117,17 @@ describe('DefaultProjectSettingsPage', () => {
         expect(screen.getByRole('heading', { name: /fișier CSV/i })).toBeInTheDocument()
         expect(screen.getByLabelText('Fișier CSV de lucru')).toBeInTheDocument()
         expect(screen.getByLabelText('Folder backup CSV')).toBeInTheDocument()
+        expect(screen.getByLabelText('Folder proiecte salvate')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Alege CSV' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Alege folder backup' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Alege folder proiecte salvate' })).toBeInTheDocument()
+    })
+
+    it('shows saved projects folder field and picker button', () => {
+        renderPage()
+
+        expect(screen.getByLabelText('Folder proiecte salvate')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Alege folder proiecte salvate' })).toBeInTheDocument()
     })
 
     it('shows phone image folder field', () => {
@@ -152,6 +164,15 @@ describe('DefaultProjectSettingsPage', () => {
         })
 
         expect(screen.getByLabelText('Folder backup CSV')).toHaveValue(savedCsvFileSettings.backupFolderPath)
+        expect(screen.getByLabelText('Folder proiecte salvate')).toHaveValue(savedCsvFileSettings.savedProjectsFolderPath)
+    })
+
+    it('loads existing saved projects folder value into the form', async () => {
+        renderPage()
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Folder proiecte salvate')).toHaveValue('C:/work/saved-projects')
+        })
     })
 
     it('allows editing fields', async () => {
@@ -316,6 +337,18 @@ describe('DefaultProjectSettingsPage', () => {
         expect(csvFileSettingsService.selectBackupFolder).toHaveBeenCalledOnce()
     })
 
+    it('selects saved projects folder through the CSV file settings service', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        await user.click(screen.getByRole('button', { name: 'Alege folder proiecte salvate' }))
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Folder proiecte salvate')).toHaveValue('C:/selected/saved-projects')
+        })
+        expect(csvFileSettingsService.selectSavedProjectsFolder).toHaveBeenCalledOnce()
+    })
+
     it('saves CSV file settings through the service', async () => {
         const user = userEvent.setup()
         renderPage()
@@ -326,12 +359,35 @@ describe('DefaultProjectSettingsPage', () => {
 
         await user.click(screen.getByRole('button', { name: 'Alege CSV' }))
         await user.click(screen.getByRole('button', { name: 'Alege folder backup' }))
+        await user.click(screen.getByRole('button', { name: 'Alege folder proiecte salvate' }))
         await user.click(screen.getAllByRole('button', { name: /Salve/ })[2])
 
         await waitFor(() => {
             expect(csvFileSettingsService.setCsvFileSettings).toHaveBeenCalledWith({
                 workingCsvPath: 'C:/selected/selected.csv',
                 backupFolderPath: 'C:/selected/backups',
+                savedProjectsFolderPath: 'C:/selected/saved-projects',
+            })
+        })
+    })
+
+    it('persists savedProjectsFolderPath when saving CSV file settings', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Folder proiecte salvate')).toHaveValue(savedCsvFileSettings.savedProjectsFolderPath)
+        })
+
+        await user.clear(screen.getByLabelText('Folder proiecte salvate'))
+        await user.type(screen.getByLabelText('Folder proiecte salvate'), 'D:/saved/projects')
+        await user.click(screen.getAllByRole('button', { name: /Salve/ })[2])
+
+        await waitFor(() => {
+            expect(csvFileSettingsService.setCsvFileSettings).toHaveBeenCalledWith({
+                workingCsvPath: savedCsvFileSettings.workingCsvPath,
+                backupFolderPath: savedCsvFileSettings.backupFolderPath,
+                savedProjectsFolderPath: 'D:/saved/projects',
             })
         })
     })

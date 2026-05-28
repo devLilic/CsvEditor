@@ -10,6 +10,10 @@ export const ipcMock = {
     bkpCsv: vi.fn(), // ⬅️ OBLIGATORIU exact acest nume
 
     createCsvBackup: vi.fn(),
+    listSavedCsvProjects: vi.fn(),
+    saveCsvProjectAs: vi.fn(),
+    loadCsvProjectIntoWorking: vi.fn(),
+    deleteCsvProject: vi.fn(),
 
     // Settings
     getQuickTitles: vi.fn(),
@@ -25,10 +29,20 @@ export const ipcMock = {
     setCsvFileSettings: vi.fn(),
     selectWorkingCsv: vi.fn(),
     selectBackupFolder: vi.fn(),
+    selectSavedProjectsFolder: vi.fn(),
     saveFinalPhoneImage: vi.fn(),
     loadPhoneImageDataUrl: vi.fn(),
     listWorkPathImages: vi.fn(),
     getPhoneImageDataUrl: vi.fn(),
+
+    // App update
+    appUpdate: {
+        getCurrentVersion: vi.fn(),
+        checkForUpdates: vi.fn(),
+        downloadUpdate: vi.fn(),
+        installUpdate: vi.fn(),
+        onStatus: vi.fn(() => vi.fn()),
+    },
 
     // App menu
     onMenuNavigate: vi.fn(() => vi.fn()),

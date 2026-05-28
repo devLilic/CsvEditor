@@ -6,6 +6,10 @@ export const IPC_CHANNELS = {
     CSV_WRITE: "csv:write",
     CSV_BKP: "csv:bkp",
     CSV_CREATE_BACKUP: "csv:create-backup",
+    CSV_PROJECT_LIST: "csv-project:list",
+    CSV_PROJECT_SAVE_AS: "csv-project:save-as",
+    CSV_PROJECT_LOAD_INTO_WORKING: "csv-project:load-into-working",
+    CSV_PROJECT_DELETE: "csv-project:delete",
 
     SETTINGS_GET_QUICK_TITLES: "settings:get-quickTitles",
     SETTINGS_SET_QUICK_TITLES: "settings:set-quickTitles",
@@ -23,11 +27,18 @@ export const IPC_CHANNELS = {
     SETTINGS_SET_CSV_FILE: "settings:set-csv-file",
     SETTINGS_SELECT_WORKING_CSV: "settings:select-working-csv",
     SETTINGS_SELECT_BACKUP_FOLDER: "settings:select-backup-folder",
+    SETTINGS_SELECT_SAVED_PROJECTS_FOLDER: "settings:select-saved-projects-folder",
 
     PHONE_IMAGE_SAVE_FINAL: "phone-image:save-final",
     PHONE_IMAGE_LOAD_DATA_URL: "phone-image:load-data-url",
     PHONE_IMAGE_LIST_WORK_PATH_IMAGES: "phone-image:list-work-path-images",
     PHONE_IMAGE_GET_IMAGE_DATA_URL: "phone-image:get-image-data-url",
+
+    UPDATE_GET_CURRENT_VERSION: "update:get-current-version",
+    UPDATE_CHECK: "update:check",
+    UPDATE_DOWNLOAD: "update:download",
+    UPDATE_INSTALL: "update:install",
+    UPDATE_STATUS: "update:status",
 
     APP_MENU_NAVIGATE: "app-menu:navigate",
 } as const;

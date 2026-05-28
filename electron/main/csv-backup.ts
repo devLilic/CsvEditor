@@ -1,14 +1,21 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { createCsvBackupFilename } from '../../src/features/csv-editor/domain/csvBackupFile'
+import {
+    getBackupFilesToDelete,
+    MAX_BACKUP_CSV_FILES,
+    type CsvFileInfo,
+} from '../../src/features/csv-editor/domain/csvRetention'
 import type { CsvCreateBackupResponse } from '../../src/shared/ipc-types'
 
 const fsp = fs.promises
 
 type CsvBackupFs = {
-    stat(filePath: string): Promise<{ isDirectory(): boolean }>
+    stat(filePath: string): Promise<{ isDirectory(): boolean; mtimeMs?: number }>
     access(filePath: string, mode?: number): Promise<void>
     writeFile(filePath: string, content: string, encoding: BufferEncoding): Promise<void>
+    readdir(filePath: string): Promise<string[]>
+    unlink(filePath: string): Promise<void>
 }
 
 export type CsvBackupInput = {
@@ -64,6 +71,48 @@ export async function resolveCsvBackupTarget(input: CsvBackupInput): Promise<Csv
     }
 }
 
+async function cleanupOldCsvBackups(input: {
+    backupFolderPath: string
+    protectedBackupPath: string
+    fs: CsvBackupFs
+}): Promise<void> {
+    const filenames = await input.fs.readdir(input.backupFolderPath)
+    const files: CsvFileInfo[] = []
+
+    for (const filename of filenames) {
+        if (!filename.toLowerCase().endsWith('.csv')) {
+            continue
+        }
+
+        const fullPath = path.join(input.backupFolderPath, filename)
+        const stat = await input.fs.stat(fullPath).catch(() => null)
+        if (!stat || stat.isDirectory() || typeof stat.mtimeMs !== 'number') {
+            continue
+        }
+
+        files.push({
+            filename,
+            fullPath,
+            mtimeMs: fullPath === input.protectedBackupPath
+                ? Number.POSITIVE_INFINITY
+                : stat.mtimeMs,
+        })
+    }
+
+    const filesToDelete = getBackupFilesToDelete({
+        files,
+        maxFiles: MAX_BACKUP_CSV_FILES,
+    })
+
+    for (const file of filesToDelete) {
+        try {
+            await input.fs.unlink(file.fullPath)
+        } catch (error) {
+            console.error('[csv:create-backup] failed to delete old backup:', file.fullPath, error)
+        }
+    }
+}
+
 export async function writeCsvBackup(input: CsvBackupInput): Promise<CsvCreateBackupResponse> {
     try {
         const target = await resolveCsvBackupTarget(input)
@@ -73,6 +122,14 @@ export async function writeCsvBackup(input: CsvBackupInput): Promise<CsvCreateBa
 
         const fileSystem = input.fs ?? fsp
         await fileSystem.writeFile(target.backupPath, target.content, 'utf-8')
+
+        await cleanupOldCsvBackups({
+            backupFolderPath: target.backupFolderPath,
+            protectedBackupPath: target.backupPath,
+            fs: fileSystem,
+        }).catch((error) => {
+            console.error('[csv:create-backup] backup cleanup failed:', error)
+        })
 
         return {
             ok: true,

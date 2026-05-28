@@ -3,8 +3,9 @@ import { app, BrowserWindow, shell, ipcMain, Menu } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
-import { update } from './update'
+import { registerUpdateHandlers } from './update-service'
 import { registerCsvHandlers } from './csv-handlers'
+import { registerCsvProjectHandlers } from './csv-project-handlers'
 import { registerSettingsHandlers } from './settings-handlers'
 import { registerPhoneImageHandlers } from './phone-image-handlers'
 import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
@@ -46,6 +47,18 @@ let win: BrowserWindow | null = null
 const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
 const SPELLCHECK_LANGUAGES = ['ro']
+
+function getWindowTitle() {
+  return `AZ Editor (ver. ${app.getVersion()})`
+}
+
+function lockWindowTitle(window: BrowserWindow) {
+  window.setTitle(getWindowTitle())
+  window.on('page-title-updated', (event) => {
+    event.preventDefault()
+    window.setTitle(getWindowTitle())
+  })
+}
 
 function sendMenuNavigate(window: BrowserWindow, route: string) {
   window.webContents.send(IPC_CHANNELS.APP_MENU_NAVIGATE, route)
@@ -92,7 +105,7 @@ async function createWindow() {
   win = new BrowserWindow({
     width: 1600,
     height: 900,
-    title: 'devTitles',
+    title: getWindowTitle(),
     fullscreenable: true,
     autoHideMenuBar: false,
     icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
@@ -108,6 +121,7 @@ async function createWindow() {
     },
   })
 
+  lockWindowTitle(win)
   configureSpellChecker(win)
   createAppMenu(win)
 
@@ -127,6 +141,7 @@ async function createWindow() {
   // ✅ AICI ESTE LOCUL CORECT
   // =========================
   registerCsvHandlers(win)
+  registerCsvProjectHandlers()
   registerSettingsHandlers()
   registerPhoneImageHandlers()
   // =========================
@@ -142,8 +157,7 @@ async function createWindow() {
     return { action: 'deny' }
   })
 
-  // Auto update
-  update(win)
+  registerUpdateHandlers(win)
 }
 
 app.whenReady().then(createWindow)
@@ -174,6 +188,7 @@ app.on('activate', () => {
 // New window example arg: new windows url
 ipcMain.handle('open-win', (_, arg) => {
   const childWindow = new BrowserWindow({
+    title: getWindowTitle(),
     autoHideMenuBar: true,
     webPreferences: {
       preload,
@@ -183,6 +198,7 @@ ipcMain.handle('open-win', (_, arg) => {
     },
   })
 
+  lockWindowTitle(childWindow)
   configureSpellChecker(childWindow)
   createAppMenu(childWindow)
 

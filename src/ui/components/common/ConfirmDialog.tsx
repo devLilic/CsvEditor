@@ -2,45 +2,49 @@
 import { ReactNode, useState } from 'react'
 
 export function ConfirmDialog({
-                                  title,
-                                  description,
-                                  onConfirm,
-                                  children,
-                              }: {
+    title,
+    description,
+    onConfirm,
+    children,
+    confirmLabel = 'Confirmă',
+    cancelLabel = 'Anulează',
+}: {
     title: string
     description?: string
     onConfirm: () => void
     children: ReactNode
+    confirmLabel?: string
+    cancelLabel?: string
 }) {
     const [open, setOpen] = useState(false)
 
     return (
         <>
-      <span onClick={() => setOpen(true)}>
-        {children}
-      </span>
+            <span onClick={() => setOpen(true)}>
+                {children}
+            </span>
 
             {open && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                    <div className="bg-white rounded p-4 w-80">
-                        <h2 className="font-semibold mb-2">{title}</h2>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="w-80 rounded bg-white p-4">
+                        <h2 className="mb-2 font-semibold">{title}</h2>
                         {description && (
-                            <p className="text-sm text-gray-600 mb-4">
+                            <p className="mb-4 text-sm text-gray-600">
                                 {description}
                             </p>
                         )}
                         <div className="flex justify-end gap-2">
                             <button onClick={() => setOpen(false)}>
-                                Anulează
+                                {cancelLabel}
                             </button>
                             <button
                                 onClick={() => {
                                     onConfirm()
                                     setOpen(false)
                                 }}
-                                className="bg-red-600 text-white px-3 py-1 rounded"
+                                className="rounded bg-red-600 px-3 py-1 text-white"
                             >
-                                Confirmă
+                                {confirmLabel}
                             </button>
                         </div>
                     </div>

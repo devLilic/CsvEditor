@@ -140,6 +140,22 @@ describe('parseCsv', () => {
         expect(result.sections[1].rows[0].waitLocation).toBeUndefined()
     })
 
+    it('detects section markers from the Nr column', () => {
+        const csv = [
+            'Nr;Titlu;Nume;Functie;Image;Locatie',
+            '--- INVITATI ---;;;;;',
+            '1;Titlu invitati;Ion Popescu;Invitat;;Chisinau',
+        ].join('\n')
+
+        const result = parseCsv(csv)
+
+        expect(result.sections).toHaveLength(1)
+        expect(result.sections[0].kind).toBe('invited')
+        expect(result.sections[0].rows[0].title?.title).toBe('Titlu invitati')
+        expect(result.sections[0].rows[0].person?.name).toBe('Ion Popescu')
+        expect(result.sections[0].rows[0].location?.location).toBe('Chisinau')
+    })
+
     it('does not create false entities from empty rows', () => {
         const csv = [
             header,

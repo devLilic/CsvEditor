@@ -1,10 +1,15 @@
 // src/ui/components/layout/EditorHeader.tsx
 import { useState } from 'react'
 import { useEntities } from '@/features/csv-editor'
+import { useCsvContext } from '@/features/csv-editor/context/CsvContext'
+import { parseCsv } from '@/features/csv-editor/utils/csvParser'
+import { serializeCsv } from '@/features/csv-editor/utils/csvSerializer'
 import { EditModeToggle } from '@/ui/components/EditModeToggle'
 import { useTitleFilter } from '@/ui/context/TitleFilterContext'
 import { SectionsTabs } from '@/ui/components/SectionsTabs'
 import { useWorkingCsvInfo } from '@/features/csv-editor/hooks/useWorkingCsvInfo'
+import { BackupFailedDialog } from '@/ui/components/csv/BackupFailedDialog'
+import { SavedProjectsModal } from '@/ui/components/csv/SavedProjectsModal'
 import { ConfirmDialog } from '../common/ConfirmDialog'
 
 function TrashIcon() {
@@ -47,21 +52,47 @@ function TrashIcon() {
 }
 
 export function EditorHeader() {
-    const { startNewProject } = useEntities()
+    const { startNewProject, forceStartNewProjectWithoutBackup } = useEntities()
+    const { state, dispatch } = useCsvContext()
     const { titleFilter, setTitleFilter } = useTitleFilter()
     const [newProjectError, setNewProjectError] = useState<string | null>(null)
+    const [backupFailedError, setBackupFailedError] = useState<string | undefined>()
+    const [isBackupFailedDialogOpen, setIsBackupFailedDialogOpen] = useState(false)
+    const [isSavedProjectsModalOpen, setIsSavedProjectsModalOpen] = useState(false)
     const workingCsvInfo = useWorkingCsvInfo()
 
     const handleStartNewProject = async () => {
         setNewProjectError(null)
+        setBackupFailedError(undefined)
+        setIsBackupFailedDialogOpen(false)
         const result = await startNewProject()
         if (!result.ok) {
-            setNewProjectError(
-                result.error.startsWith('Backup failed:')
-                    ? 'Backup CSV nu a putut fi creat. Proiectul nu a fost resetat. Verifica folderul de backup din Setari.'
-                    : `Nu s-a putut porni proiectul nou: ${result.error}`
-            )
+            if (result.reason === 'BACKUP_FAILED') {
+                setBackupFailedError(result.error)
+                setIsBackupFailedDialogOpen(true)
+            }
         }
+    }
+
+    const handleCancelBackupFailed = () => {
+        setIsBackupFailedDialogOpen(false)
+    }
+
+    const handleContinueWithoutBackup = async () => {
+        setNewProjectError(null)
+        setIsBackupFailedDialogOpen(false)
+
+        const result = await forceStartNewProjectWithoutBackup()
+        if (!result.ok) {
+            setNewProjectError(`Nu s-a putut porni proiectul nou: ${result.error ?? 'UNKNOWN_ERROR'}`)
+        }
+    }
+
+    const handleProjectLoaded = (content: string) => {
+        dispatch({
+            type: 'CSV_LOADED',
+            payload: parseCsv(content),
+        })
     }
 
     return (
@@ -92,6 +123,14 @@ export function EditorHeader() {
 
                 <EditModeToggle />
 
+                <button
+                    type="button"
+                    onClick={() => setIsSavedProjectsModalOpen(true)}
+                    className="rounded border border-gray-300 bg-white px-4 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                >
+                    Proiecte salvate
+                </button>
+
                 <ConfirmDialog
                     title="Incepi un proiect nou?"
                     description="Se va crea un backup CSV in folderul setat in Setari. Doar dupa backup, fisierul de lucru va fi resetat cu continutul standard. Daca backup-ul esueaza, resetarea nu se face."
@@ -112,6 +151,20 @@ export function EditorHeader() {
                     {newProjectError}
                 </div>
             )}
+
+            <BackupFailedDialog
+                open={isBackupFailedDialogOpen}
+                error={backupFailedError}
+                onCancel={handleCancelBackupFailed}
+                onContinueWithoutBackup={handleContinueWithoutBackup}
+            />
+
+            <SavedProjectsModal
+                open={isSavedProjectsModalOpen}
+                currentCsvContent={serializeCsv(state.entities)}
+                onClose={() => setIsSavedProjectsModalOpen(false)}
+                onProjectLoaded={handleProjectLoaded}
+            />
         </div>
     )
 }

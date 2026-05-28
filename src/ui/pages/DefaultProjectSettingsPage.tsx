@@ -18,6 +18,7 @@ import {
 import { defaultProjectSettingsService } from '@/features/csv-editor/services/defaultProjectSettingsService'
 import { phoneImageSettingsService } from '@/features/csv-editor/services/phoneImageSettingsService'
 import { csvFileSettingsService } from '@/features/csv-editor/services/csvFileSettingsService'
+import { AppUpdatePanel } from '@/ui/components/app-update/AppUpdatePanel'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -173,6 +174,17 @@ export function DefaultProjectSettingsPage() {
         setCsvFileSettings((current) => ({
             ...current,
             backupFolderPath: selectedPath,
+        }))
+    }
+
+    const handleSelectSavedProjectsFolder = async () => {
+        setCsvFileStatus('idle')
+        const selectedPath = await csvFileSettingsService.selectSavedProjectsFolder()
+        if (!selectedPath) return
+
+        setCsvFileSettings((current) => ({
+            ...current,
+            savedProjectsFolderPath: selectedPath,
         }))
     }
 
@@ -383,6 +395,24 @@ export function DefaultProjectSettingsPage() {
                         </div>
                     </label>
 
+                    <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-gray-700">Folder proiecte salvate</span>
+                        <div className="flex gap-2">
+                            <input
+                                value={csvFileSettings.savedProjectsFolderPath}
+                                onChange={(event) => updateCsvFileField('savedProjectsFolderPath', event.target.value)}
+                                className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleSelectSavedProjectsFolder}
+                                className="shrink-0 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                            >
+                                Alege folder proiecte salvate
+                            </button>
+                        </div>
+                    </label>
+
                     <div className="flex flex-wrap items-center gap-3">
                         <button
                             type="submit"
@@ -401,6 +431,8 @@ export function DefaultProjectSettingsPage() {
                         )}
                     </div>
                 </form>
+
+                <AppUpdatePanel />
             </div>
         </main>
     )

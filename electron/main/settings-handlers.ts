@@ -180,4 +180,21 @@ export function registerSettingsHandlers() {
             return null
         }
     })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_SELECT_SAVED_PROJECTS_FOLDER, async () => {
+        try {
+            const result = await dialog.showOpenDialog({
+                properties: ['openDirectory'],
+            })
+
+            if (result.canceled) {
+                return null
+            }
+
+            return result.filePaths[0] ?? null
+        } catch (error) {
+            console.error('[settings:select-saved-projects-folder] failed:', error)
+            return null
+        }
+    })
 }

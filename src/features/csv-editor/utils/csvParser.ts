@@ -81,7 +81,7 @@ function buildRowFromCsv(row: CsvRowRaw): Omit<SectionRow, 'id'> | null {
  * CSV string ➜ EntitiesState (sections-based)
  *
  * Rules:
- * - Marker row is detected by Titlu column:
+ * - Marker row is detected by Nr column first, then legacy Titlu column:
  *   --- beta N - <title> ---
  *   --- INVITATI ---
  * - Marker rows do not create content rows; they only switch current section.
@@ -128,18 +128,20 @@ export function parseCsv(content: string): EntitiesState {
             return
         }
 
+        const nrCell = cell(row, CSV_COLUMNS.TITLE_NR)
         const titleCell = cell(row, CSV_COLUMNS.TITLE)
+        const markerCell = nrCell || titleCell
 
         // Marker: INVITATI
-        if (titleCell && isInvitedMarker(titleCell)) {
+        if (markerCell && isInvitedMarker(markerCell)) {
             sawAnyMarker = true
             startSection(createInvitedSection(uuidv4(), []))
             return
         }
 
         // Marker: beta
-        if (titleCell) {
-            const beta = parseBetaMarker(titleCell)
+        if (markerCell) {
+            const beta = parseBetaMarker(markerCell)
             if (beta) {
                 sawAnyMarker = true
                 startSection(createBetaSection(uuidv4(), beta.betaIndex, beta.betaTitle, []))

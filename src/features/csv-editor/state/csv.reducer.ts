@@ -261,7 +261,11 @@ export function csvReducer(state: CsvState, action: CsvAction): CsvState {
     switch (action.type) {
         case 'CSV_LOADED': {
             const sections = ensureInvitedLast(action.payload.sections ?? [])
-            const activeSectionId = state.activeSectionId ?? sections[0]?.id ?? null
+            const previousActiveSectionExists = sections.some((section) => section.id === state.activeSectionId)
+            const invitedSection = sections.find((section) => section.kind === 'invited')
+            const activeSectionId = previousActiveSectionExists
+                ? state.activeSectionId
+                : invitedSection?.id ?? sections[0]?.id ?? null
             return {
                 ...state,
                 entities: { sections },

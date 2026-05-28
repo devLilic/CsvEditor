@@ -17,9 +17,6 @@ function emptyCsvRow(): Record<string, string> {
         [CSV_COLUMNS.PERSON_OCCUPATION]: '',
         [CSV_COLUMNS.IMAGE]: '',
         [CSV_COLUMNS.LOCATION]: '',
-        [CSV_COLUMNS.HOT_TITLE]: '',
-        [CSV_COLUMNS.WAIT_TITLE]: '',
-        [CSV_COLUMNS.WAIT_LOCATION]: '',
     }
 }
 
@@ -33,7 +30,7 @@ function packSectionRows(section: CsvSection, options: SerializeCsvOptions): Rec
 
     out.push({
         ...emptyCsvRow(),
-        [CSV_COLUMNS.TITLE]: marker,
+        [CSV_COLUMNS.TITLE_NR]: marker,
     })
 
     // 2) content rows packed
@@ -60,12 +57,6 @@ function packSectionRows(section: CsvSection, options: SerializeCsvOptions): Rec
                 : '',
 
             [CSV_COLUMNS.LOCATION]: r.location?.location ?? '',
-            [CSV_COLUMNS.HOT_TITLE]: '',
-
-            // Legacy hot/wait columns stay in the CSV header for compatibility,
-            // but the current UI scope no longer generates values for them.
-            [CSV_COLUMNS.WAIT_TITLE]: '',
-            [CSV_COLUMNS.WAIT_LOCATION]: '',
         })
     }
 
@@ -76,7 +67,7 @@ function packSectionRows(section: CsvSection, options: SerializeCsvOptions): Rec
  * EntitiesState ➜ CSV string (sections-based)
  *
  * Rules:
- * - each section starts with marker row in Titlu column
+ * - each section starts with marker row in Nr column
  * - Nr resets per section
  * - Nr filled only for non-empty Titlu rows (not markers)
  * - packing is based on section.rows order

@@ -2,7 +2,7 @@
 import { ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
-import type { RendererApi } from '../../src/shared/ipc-types'
+import type { RendererApi, UpdateStatus } from '../../src/shared/ipc-types'
 
 export const electronApi: RendererApi = {
     getLastCsv() {
@@ -28,6 +28,22 @@ export const electronApi: RendererApi = {
 
     createCsvBackup(request) {
         return ipcRenderer.invoke(IPC_CHANNELS.CSV_CREATE_BACKUP, request)
+    },
+
+    listSavedCsvProjects() {
+        return ipcRenderer.invoke(IPC_CHANNELS.CSV_PROJECT_LIST)
+    },
+
+    saveCsvProjectAs(request) {
+        return ipcRenderer.invoke(IPC_CHANNELS.CSV_PROJECT_SAVE_AS, request)
+    },
+
+    loadCsvProjectIntoWorking(request) {
+        return ipcRenderer.invoke(IPC_CHANNELS.CSV_PROJECT_LOAD_INTO_WORKING, request)
+    },
+
+    deleteCsvProject(request) {
+        return ipcRenderer.invoke(IPC_CHANNELS.CSV_PROJECT_DELETE, request)
     },
 
     getQuickTitles() {
@@ -82,6 +98,10 @@ export const electronApi: RendererApi = {
         return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SELECT_BACKUP_FOLDER)
     },
 
+    selectSavedProjectsFolder() {
+        return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SELECT_SAVED_PROJECTS_FOLDER)
+    },
+
     saveFinalPhoneImage(request) {
         return ipcRenderer.invoke(IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL, request)
     },
@@ -96,6 +116,36 @@ export const electronApi: RendererApi = {
 
     getPhoneImageDataUrl(request) {
         return ipcRenderer.invoke(IPC_CHANNELS.PHONE_IMAGE_GET_IMAGE_DATA_URL, request)
+    },
+
+    appUpdate: {
+        getCurrentVersion() {
+            return ipcRenderer.invoke(IPC_CHANNELS.UPDATE_GET_CURRENT_VERSION)
+        },
+
+        checkForUpdates() {
+            return ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CHECK)
+        },
+
+        downloadUpdate() {
+            return ipcRenderer.invoke(IPC_CHANNELS.UPDATE_DOWNLOAD)
+        },
+
+        async installUpdate() {
+            await ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL)
+        },
+
+        onStatus(callback) {
+            const listener = (_event: IpcRendererEvent, status: UpdateStatus) => {
+                callback(status)
+            }
+
+            ipcRenderer.on(IPC_CHANNELS.UPDATE_STATUS, listener)
+
+            return () => {
+                ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_STATUS, listener)
+            }
+        },
     },
 
     onMenuNavigate(callback) {

@@ -1,11 +1,19 @@
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "CsvEditor",
+  "appId": "com.devlilic.csveditor",
   "asar": true,
   "productName": "CsvEditor",
   "directories": {
     "output": "release/${version}"
   },
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "devLilic",
+      "repo": "CsvEditor",
+      "releaseType": "release"
+    }
+  ],
   "files": [
     "dist-electron",
     "dist"
