@@ -30,10 +30,12 @@ export const ipcMock = {
     selectWorkingCsv: vi.fn(),
     selectBackupFolder: vi.fn(),
     selectSavedProjectsFolder: vi.fn(),
+    selectExportCsvFolder: vi.fn(),
     saveFinalPhoneImage: vi.fn(),
     loadPhoneImageDataUrl: vi.fn(),
     listWorkPathImages: vi.fn(),
     getPhoneImageDataUrl: vi.fn(),
+    onEntityExportError: vi.fn(() => vi.fn()),
 
     // App update
     appUpdate: {

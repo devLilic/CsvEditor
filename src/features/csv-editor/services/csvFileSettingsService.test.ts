@@ -9,6 +9,7 @@ describe('csvFileSettingsService', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: 'C:/work/saved-projects',
+            exportCsvFolderPath: 'C:/work/export',
         }
         api.getCsvFileSettings.mockResolvedValueOnce(settings)
 
@@ -25,6 +26,7 @@ describe('csvFileSettingsService', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: 'D:/projects/saved',
+            exportCsvFolderPath: 'D:/projects/export',
         })
 
         const result = await csvFileSettingsService.getCsvFileSettings()
@@ -47,6 +49,7 @@ describe('csvFileSettingsService', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: 'C:/work/saved-projects',
+            exportCsvFolderPath: 'C:/work/export',
         }
         api.setCsvFileSettings.mockResolvedValueOnce(settings)
 
@@ -62,6 +65,7 @@ describe('csvFileSettingsService', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: 'D:/projects/saved',
+            exportCsvFolderPath: 'D:/projects/export',
         }
         api.setCsvFileSettings.mockResolvedValueOnce(settings)
 
@@ -71,6 +75,7 @@ describe('csvFileSettingsService', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: 'D:/projects/saved',
+            exportCsvFolderPath: 'D:/projects/export',
         })
         expect(result.savedProjectsFolderPath).toBe('D:/projects/saved')
     })
@@ -83,6 +88,7 @@ describe('csvFileSettingsService', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: 'C:/work/saved-projects',
+            exportCsvFolderPath: 'C:/work/export',
         })
 
         expect(result).toEqual(FALLBACK_CSV_FILE_SETTINGS)
@@ -126,5 +132,23 @@ describe('csvFileSettingsService', () => {
         api.selectSavedProjectsFolder.mockRejectedValueOnce(new Error('dialog error'))
 
         await expect(csvFileSettingsService.selectSavedProjectsFolder()).resolves.toBeNull()
+    })
+
+    it('selectExportCsvFolder returns path or null', async () => {
+        const api = (window as any).electronAPI
+        api.selectExportCsvFolder
+            .mockResolvedValueOnce('C:/work/export')
+            .mockResolvedValueOnce(null)
+
+        await expect(csvFileSettingsService.selectExportCsvFolder()).resolves.toBe('C:/work/export')
+        await expect(csvFileSettingsService.selectExportCsvFolder()).resolves.toBeNull()
+        expect(api.selectExportCsvFolder).toHaveBeenCalledTimes(2)
+    })
+
+    it('selectExportCsvFolder returns null when IPC fails', async () => {
+        const api = (window as any).electronAPI
+        api.selectExportCsvFolder.mockRejectedValueOnce(new Error('dialog error'))
+
+        await expect(csvFileSettingsService.selectExportCsvFolder()).resolves.toBeNull()
     })
 })

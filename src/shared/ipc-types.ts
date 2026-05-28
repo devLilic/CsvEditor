@@ -102,6 +102,12 @@ export type UpdateDownloadResult =
     | { ok: true }
     | { ok: false; error: string }
 
+export interface EntityExportFailureNotification {
+    kind: 'titles' | 'persons' | 'locations' | 'phones'
+    filePath: string
+    message: string
+}
+
 export interface PhoneImageSaveFinalRequest {
     filename: string
     jpegBase64: string
@@ -267,6 +273,11 @@ export interface IpcInvokeMap {
         response: string | null
     }
 
+    [IPC_CHANNELS.SETTINGS_SELECT_EXPORT_CSV_FOLDER]: {
+        request: void
+        response: string | null
+    }
+
     [IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL]: {
         request: PhoneImageSaveFinalRequest
         response: PhoneImageSaveFinalResponse
@@ -344,11 +355,14 @@ export interface RendererApi {
     selectWorkingCsv(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SELECT_WORKING_CSV>>
     selectBackupFolder(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SELECT_BACKUP_FOLDER>>
     selectSavedProjectsFolder(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SELECT_SAVED_PROJECTS_FOLDER>>
+    selectExportCsvFolder(): Promise<IpcResponse<typeof IPC_CHANNELS.SETTINGS_SELECT_EXPORT_CSV_FOLDER>>
 
     saveFinalPhoneImage(request: IpcRequest<typeof IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL>): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL>>
     loadPhoneImageDataUrl(request: IpcRequest<typeof IPC_CHANNELS.PHONE_IMAGE_LOAD_DATA_URL>): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_LOAD_DATA_URL>>
     listWorkPathImages(): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_LIST_WORK_PATH_IMAGES>>
     getPhoneImageDataUrl(request: IpcRequest<typeof IPC_CHANNELS.PHONE_IMAGE_GET_IMAGE_DATA_URL>): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_GET_IMAGE_DATA_URL>>
+
+    onEntityExportError(callback: (notification: EntityExportFailureNotification) => void): () => void
 
     appUpdate: {
         getCurrentVersion(): Promise<IpcResponse<typeof IPC_CHANNELS.UPDATE_GET_CURRENT_VERSION>>

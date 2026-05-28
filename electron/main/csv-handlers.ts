@@ -6,6 +6,9 @@ import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
 import type { CsvFileDescriptor } from '../../src/shared/ipc-types'
 import { getCsvFilePath, getCsvFileSettings, setCsvFilePath } from '../store'
 import { writeCsvBackup } from './csv-backup'
+import { resolveEntityExportPaths } from '../../src/features/entity-export/domain/exportPathResolver'
+import { notifyEntityExportFailure } from './entity-export-notification'
+import { exportEntityCsvFilesFromFullCsvContent } from './entity-export-service'
 
 const fsp = fs.promises
 
@@ -53,6 +56,31 @@ function getConfiguredCsvPath(): string | null {
 function getWorkingCsvPath(): string | null {
     const settingsPath = getCsvFileSettings().workingCsvPath.trim()
     return settingsPath || null
+}
+
+async function exportEntityCsvsAfterWorkingCsvWrite(
+    mainWindow: BrowserWindow,
+    content: string,
+    workingCsvPath: string
+): Promise<void> {
+    try {
+        const settings = getCsvFileSettings()
+        const exportPaths = resolveEntityExportPaths({
+            workingCsvPath,
+            exportFolderPath: settings.exportCsvFolderPath,
+        })
+        const result = await exportEntityCsvFilesFromFullCsvContent({
+            paths: exportPaths,
+            content,
+            onError: (error) => notifyEntityExportFailure(mainWindow, error),
+        })
+
+        if (!result.ok) {
+            console.error('[entity-export] failed after csv:write:', result.error)
+        }
+    } catch (error) {
+        console.error('[entity-export] failed after csv:write:', error)
+    }
 }
 
 export function registerCsvHandlers(mainWindow: BrowserWindow) {
@@ -116,6 +144,7 @@ export function registerCsvHandlers(mainWindow: BrowserWindow) {
             }
 
             await fsp.writeFile(csvPath, content, 'utf-8')
+            await exportEntityCsvsAfterWorkingCsvWrite(mainWindow, content, csvPath)
             return { ok: true }
         } catch (error) {
             console.error('[csv:write] failed:', error)

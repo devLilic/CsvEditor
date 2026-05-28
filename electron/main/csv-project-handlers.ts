@@ -1,7 +1,9 @@
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import { createSavedProjectFilename } from '../../src/features/csv-editor/domain/savedProjectFile'
+import { parseCsv } from '../../src/features/csv-editor/utils/csvParser'
+import { resolveEntityExportPaths } from '../../src/features/entity-export/domain/exportPathResolver'
 import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
 import type {
     CsvProjectDeleteRequest,
@@ -15,6 +17,8 @@ import type {
 } from '../../src/shared/ipc-types'
 import { getCsvFileSettings } from '../store'
 import { writeCsvBackup } from './csv-backup'
+import { notifyEntityExportFailure } from './entity-export-notification'
+import { exportEntityCsvFilesFromEntities } from './entity-export-service'
 
 const fsp = fs.promises
 
@@ -134,7 +138,36 @@ async function saveCsvProjectAs(request: unknown): Promise<CsvProjectSaveAsRespo
     }
 }
 
-async function loadCsvProjectIntoWorking(request: unknown): Promise<CsvProjectLoadIntoWorkingResponse> {
+async function exportEntityCsvsAfterProjectLoad(input: {
+    mainWindow: BrowserWindow
+    content: string
+    workingCsvPath: string
+    exportCsvFolderPath: string
+}): Promise<void> {
+    try {
+        const entities = parseCsv(input.content)
+        const exportPaths = resolveEntityExportPaths({
+            workingCsvPath: input.workingCsvPath,
+            exportFolderPath: input.exportCsvFolderPath,
+        })
+        const result = await exportEntityCsvFilesFromEntities({
+            paths: exportPaths,
+            entities,
+            onError: (error) => notifyEntityExportFailure(input.mainWindow, error),
+        })
+
+        if (!result.ok) {
+            console.error('[entity-export] failed after csv-project:load-into-working:', result.error)
+        }
+    } catch (error) {
+        console.error('[entity-export] failed after csv-project:load-into-working:', error)
+    }
+}
+
+async function loadCsvProjectIntoWorking(
+    mainWindow: BrowserWindow,
+    request: unknown
+): Promise<CsvProjectLoadIntoWorkingResponse> {
     const payload = request as Partial<CsvProjectLoadIntoWorkingRequest> | null
     if (typeof payload?.filename !== 'string') {
         return { ok: false, error: 'Invalid filename type, expected string' }
@@ -177,6 +210,12 @@ async function loadCsvProjectIntoWorking(request: unknown): Promise<CsvProjectLo
     }
 
     await fsp.writeFile(workingCsvPath, savedProjectContent, 'utf-8')
+    await exportEntityCsvsAfterProjectLoad({
+        mainWindow,
+        content: savedProjectContent,
+        workingCsvPath,
+        exportCsvFolderPath: settings.exportCsvFolderPath,
+    })
 
     return {
         ok: true,
@@ -216,7 +255,7 @@ async function deleteCsvProject(request: unknown): Promise<CsvProjectDeleteRespo
     return { ok: true }
 }
 
-export function registerCsvProjectHandlers() {
+export function registerCsvProjectHandlers(mainWindow: BrowserWindow) {
     ipcMain.handle(IPC_CHANNELS.CSV_PROJECT_LIST, async () => {
         try {
             return await listSavedCsvProjects()
@@ -244,7 +283,7 @@ export function registerCsvProjectHandlers() {
 
     ipcMain.handle(IPC_CHANNELS.CSV_PROJECT_LOAD_INTO_WORKING, async (_event, request: unknown) => {
         try {
-            return await loadCsvProjectIntoWorking(request)
+            return await loadCsvProjectIntoWorking(mainWindow, request)
         } catch (error) {
             console.error('[csv-project:load-into-working] failed:', error)
             return {

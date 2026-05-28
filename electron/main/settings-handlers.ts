@@ -197,4 +197,21 @@ export function registerSettingsHandlers() {
             return null
         }
     })
+
+    ipcMain.handle(IPC_CHANNELS.SETTINGS_SELECT_EXPORT_CSV_FOLDER, async () => {
+        try {
+            const result = await dialog.showOpenDialog({
+                properties: ['openDirectory'],
+            })
+
+            if (result.canceled) {
+                return null
+            }
+
+            return result.filePaths[0] ?? null
+        } catch (error) {
+            console.error('[settings:select-export-csv-folder] failed:', error)
+            return null
+        }
+    })
 }

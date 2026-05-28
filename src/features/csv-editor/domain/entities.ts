@@ -27,6 +27,7 @@ export interface Person extends BaseEntity {
 }
 
 export interface SimpleTitle extends BaseEntity {
+    nr?: string
     title: string
 }
 

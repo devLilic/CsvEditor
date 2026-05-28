@@ -10,10 +10,12 @@ describe('normalizeCsvFileSettings', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: 'C:/work/saved-projects',
+            exportCsvFolderPath: 'C:/work/export',
         })).toEqual({
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: 'C:/work/saved-projects',
+            exportCsvFolderPath: 'C:/work/export',
         })
     })
 
@@ -28,6 +30,7 @@ describe('normalizeCsvFileSettings', () => {
             workingCsvPath: FALLBACK_CSV_FILE_SETTINGS.workingCsvPath,
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: FALLBACK_CSV_FILE_SETTINGS.savedProjectsFolderPath,
+            exportCsvFolderPath: FALLBACK_CSV_FILE_SETTINGS.exportCsvFolderPath,
         })
     })
 
@@ -38,6 +41,7 @@ describe('normalizeCsvFileSettings', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: FALLBACK_CSV_FILE_SETTINGS.backupFolderPath,
             savedProjectsFolderPath: FALLBACK_CSV_FILE_SETTINGS.savedProjectsFolderPath,
+            exportCsvFolderPath: FALLBACK_CSV_FILE_SETTINGS.exportCsvFolderPath,
         })
     })
 
@@ -49,6 +53,7 @@ describe('normalizeCsvFileSettings', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: FALLBACK_CSV_FILE_SETTINGS.savedProjectsFolderPath,
+            exportCsvFolderPath: FALLBACK_CSV_FILE_SETTINGS.exportCsvFolderPath,
         })
     })
 
@@ -61,6 +66,7 @@ describe('normalizeCsvFileSettings', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: FALLBACK_CSV_FILE_SETTINGS.savedProjectsFolderPath,
+            exportCsvFolderPath: FALLBACK_CSV_FILE_SETTINGS.exportCsvFolderPath,
         })
     })
 
@@ -69,11 +75,13 @@ describe('normalizeCsvFileSettings', () => {
             workingCsvPath: 'C:/work/current.csv',
             backupFolderPath: 'C:/work/backups',
             savedProjectsFolderPath: 'C:/work/saved-projects',
+            exportCsvFolderPath: 'C:/work/export',
         })
 
         expect(settings.workingCsvPath).toBe('C:/work/current.csv')
         expect(settings.backupFolderPath).toBe('C:/work/backups')
         expect(settings.savedProjectsFolderPath).toBe('C:/work/saved-projects')
+        expect(settings.exportCsvFolderPath).toBe('C:/work/export')
     })
 
     it('uses fallback for non-string values', () => {
@@ -81,6 +89,7 @@ describe('normalizeCsvFileSettings', () => {
             workingCsvPath: 123,
             backupFolderPath: false,
             savedProjectsFolderPath: null,
+            exportCsvFolderPath: 456,
         })).toEqual(FALLBACK_CSV_FILE_SETTINGS)
     })
 
@@ -93,10 +102,25 @@ describe('normalizeCsvFileSettings', () => {
             workingCsvPath: '  C:/path with spaces/current.csv  ',
             backupFolderPath: '',
             savedProjectsFolderPath: '  C:/path with spaces/saved projects  ',
+            exportCsvFolderPath: '  C:/path with spaces/export  ',
         })
 
         expect(settings.workingCsvPath).toBe('  C:/path with spaces/current.csv  ')
         expect(settings.backupFolderPath).toBe('')
         expect(settings.savedProjectsFolderPath).toBe('  C:/path with spaces/saved projects  ')
+        expect(settings.exportCsvFolderPath).toBe('  C:/path with spaces/export  ')
+    })
+
+    it('uses fallback for missing exportCsvFolderPath', () => {
+        expect(normalizeCsvFileSettings({
+            workingCsvPath: 'C:/work/current.csv',
+            backupFolderPath: 'C:/work/backups',
+            savedProjectsFolderPath: 'C:/work/saved-projects',
+        })).toEqual({
+            workingCsvPath: 'C:/work/current.csv',
+            backupFolderPath: 'C:/work/backups',
+            savedProjectsFolderPath: 'C:/work/saved-projects',
+            exportCsvFolderPath: FALLBACK_CSV_FILE_SETTINGS.exportCsvFolderPath,
+        })
     })
 })

@@ -58,6 +58,17 @@ describe('parseCsv', () => {
         expect(result.sections[0].rows[0].waitLocation).toBeUndefined()
     })
 
+    it('keeps the original Nr value on parsed titles', () => {
+        const csv = [
+            header,
+            '003;Titlu cu nr;Ion Popescu;Reporter;Chisinau;Urgent;Asteptare;Studio',
+        ].join('\n')
+
+        const result = parseCsv(csv)
+
+        expect(result.sections[0].rows[0].title?.nr).toBe('003')
+    })
+
     it('parses Image column for a person', () => {
         const csv = [
             'Nr;Titlu;Nume;Functie;Locatie;Image',

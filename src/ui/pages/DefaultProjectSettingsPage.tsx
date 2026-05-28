@@ -18,6 +18,7 @@ import {
 import { defaultProjectSettingsService } from '@/features/csv-editor/services/defaultProjectSettingsService'
 import { phoneImageSettingsService } from '@/features/csv-editor/services/phoneImageSettingsService'
 import { csvFileSettingsService } from '@/features/csv-editor/services/csvFileSettingsService'
+import { resolveEntityExportFolder } from '@/features/entity-export/domain/exportPathResolver'
 import { AppUpdatePanel } from '@/ui/components/app-update/AppUpdatePanel'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -187,6 +188,24 @@ export function DefaultProjectSettingsPage() {
             savedProjectsFolderPath: selectedPath,
         }))
     }
+
+    const handleSelectExportCsvFolder = async () => {
+        setCsvFileStatus('idle')
+        const selectedPath = await csvFileSettingsService.selectExportCsvFolder()
+        if (!selectedPath) return
+
+        setCsvFileSettings((current) => ({
+            ...current,
+            exportCsvFolderPath: selectedPath,
+        }))
+    }
+
+    const resolvedExportCsvFolder = csvFileSettings.workingCsvPath
+        ? resolveEntityExportFolder({
+            workingCsvPath: csvFileSettings.workingCsvPath,
+            exportFolderPath: csvFileSettings.exportCsvFolderPath,
+        })
+        : ''
 
     return (
         <main className="min-h-screen bg-gray-50 p-6">
@@ -411,6 +430,30 @@ export function DefaultProjectSettingsPage() {
                                 Alege folder proiecte salvate
                             </button>
                         </div>
+                    </label>
+
+                    <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-gray-700">Export CSV Folder</span>
+                        <div className="flex gap-2">
+                            <input
+                                aria-label="Export CSV Folder"
+                                value={csvFileSettings.exportCsvFolderPath}
+                                onChange={(event) => updateCsvFileField('exportCsvFolderPath', event.target.value)}
+                                className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleSelectExportCsvFolder}
+                                className="shrink-0 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                            >
+                                Alege folder export
+                            </button>
+                        </div>
+                        <span className="w-fit max-w-full truncate rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600">
+                            {resolvedExportCsvFolder
+                                ? `Folder efectiv: ${resolvedExportCsvFolder}`
+                                : 'Fallback: folderul Export langa fisierul CSV de lucru'}
+                        </span>
                     </label>
 
                     <div className="flex flex-wrap items-center gap-3">
