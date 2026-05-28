@@ -28,11 +28,14 @@ export const IPC_CHANNELS = {
     SETTINGS_SELECT_WORKING_CSV: "settings:select-working-csv",
     SETTINGS_SELECT_BACKUP_FOLDER: "settings:select-backup-folder",
     SETTINGS_SELECT_SAVED_PROJECTS_FOLDER: "settings:select-saved-projects-folder",
+    SETTINGS_SELECT_EXPORT_CSV_FOLDER: "settings:select-export-csv-folder",
 
     PHONE_IMAGE_SAVE_FINAL: "phone-image:save-final",
     PHONE_IMAGE_LOAD_DATA_URL: "phone-image:load-data-url",
     PHONE_IMAGE_LIST_WORK_PATH_IMAGES: "phone-image:list-work-path-images",
     PHONE_IMAGE_GET_IMAGE_DATA_URL: "phone-image:get-image-data-url",
+
+    ENTITY_EXPORT_ERROR: "entity-export:error",
 
     UPDATE_GET_CURRENT_VERSION: "update:get-current-version",
     UPDATE_CHECK: "update:check",

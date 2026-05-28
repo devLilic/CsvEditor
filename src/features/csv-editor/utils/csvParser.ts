@@ -38,6 +38,7 @@ function isCompletelyEmptyRow(row: CsvRowRaw): boolean {
 }
 
 function buildRowFromCsv(row: CsvRowRaw): Omit<SectionRow, 'id'> | null {
+    const nr = cell(row, CSV_COLUMNS.TITLE_NR)
     const titleText = cell(row, CSV_COLUMNS.TITLE)
     const name = cell(row, CSV_COLUMNS.PERSON_NAME)
     const occupation = cell(row, CSV_COLUMNS.PERSON_OCCUPATION)
@@ -57,7 +58,7 @@ function buildRowFromCsv(row: CsvRowRaw): Omit<SectionRow, 'id'> | null {
     const out: Omit<SectionRow, 'id'> = {}
 
     if (titleText !== '') {
-        const t: SimpleTitle = { id: uuidv4(), title: titleText }
+        const t: SimpleTitle = { id: uuidv4(), nr, title: titleText }
         out.title = t
     }
 

@@ -38,6 +38,7 @@ vi.mock('@/features/csv-editor/services/csvFileSettingsService', () => ({
         selectWorkingCsv: vi.fn(),
         selectBackupFolder: vi.fn(),
         selectSavedProjectsFolder: vi.fn(),
+        selectExportCsvFolder: vi.fn(),
     },
 }))
 
@@ -58,6 +59,7 @@ const savedCsvFileSettings: CsvFileSettings = {
     workingCsvPath: 'C:/work/current.csv',
     backupFolderPath: 'C:/work/backups',
     savedProjectsFolderPath: 'C:/work/saved-projects',
+    exportCsvFolderPath: 'C:/work/export',
 }
 
 function renderPage() {
@@ -83,6 +85,7 @@ describe('DefaultProjectSettingsPage', () => {
         vi.mocked(csvFileSettingsService.selectWorkingCsv).mockResolvedValue('C:/selected/selected.csv')
         vi.mocked(csvFileSettingsService.selectBackupFolder).mockResolvedValue('C:/selected/backups')
         vi.mocked(csvFileSettingsService.selectSavedProjectsFolder).mockResolvedValue('C:/selected/saved-projects')
+        vi.mocked(csvFileSettingsService.selectExportCsvFolder).mockResolvedValue('C:/selected/export')
     })
 
     afterEach(() => {
@@ -118,9 +121,11 @@ describe('DefaultProjectSettingsPage', () => {
         expect(screen.getByLabelText('Fișier CSV de lucru')).toBeInTheDocument()
         expect(screen.getByLabelText('Folder backup CSV')).toBeInTheDocument()
         expect(screen.getByLabelText('Folder proiecte salvate')).toBeInTheDocument()
+        expect(screen.getByLabelText('Export CSV Folder')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Alege CSV' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Alege folder backup' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Alege folder proiecte salvate' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Alege folder export' })).toBeInTheDocument()
     })
 
     it('shows saved projects folder field and picker button', () => {
@@ -165,6 +170,7 @@ describe('DefaultProjectSettingsPage', () => {
 
         expect(screen.getByLabelText('Folder backup CSV')).toHaveValue(savedCsvFileSettings.backupFolderPath)
         expect(screen.getByLabelText('Folder proiecte salvate')).toHaveValue(savedCsvFileSettings.savedProjectsFolderPath)
+        expect(screen.getByLabelText('Export CSV Folder')).toHaveValue(savedCsvFileSettings.exportCsvFolderPath)
     })
 
     it('loads existing saved projects folder value into the form', async () => {
@@ -349,6 +355,31 @@ describe('DefaultProjectSettingsPage', () => {
         expect(csvFileSettingsService.selectSavedProjectsFolder).toHaveBeenCalledOnce()
     })
 
+    it('selects export CSV folder through the CSV file settings service', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        await user.click(screen.getByRole('button', { name: 'Alege folder export' }))
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Export CSV Folder')).toHaveValue('C:/selected/export')
+        })
+        expect(csvFileSettingsService.selectExportCsvFolder).toHaveBeenCalledOnce()
+    })
+
+    it('shows fallback export folder when export CSV folder is not configured', async () => {
+        vi.mocked(csvFileSettingsService.getCsvFileSettings).mockResolvedValueOnce({
+            ...savedCsvFileSettings,
+            exportCsvFolderPath: '',
+        })
+
+        renderPage()
+
+        await waitFor(() => {
+            expect(screen.getByText('Folder efectiv: C:\\work\\Export')).toBeInTheDocument()
+        })
+    })
+
     it('saves CSV file settings through the service', async () => {
         const user = userEvent.setup()
         renderPage()
@@ -360,6 +391,7 @@ describe('DefaultProjectSettingsPage', () => {
         await user.click(screen.getByRole('button', { name: 'Alege CSV' }))
         await user.click(screen.getByRole('button', { name: 'Alege folder backup' }))
         await user.click(screen.getByRole('button', { name: 'Alege folder proiecte salvate' }))
+        await user.click(screen.getByRole('button', { name: 'Alege folder export' }))
         await user.click(screen.getAllByRole('button', { name: /Salve/ })[2])
 
         await waitFor(() => {
@@ -367,6 +399,7 @@ describe('DefaultProjectSettingsPage', () => {
                 workingCsvPath: 'C:/selected/selected.csv',
                 backupFolderPath: 'C:/selected/backups',
                 savedProjectsFolderPath: 'C:/selected/saved-projects',
+                exportCsvFolderPath: 'C:/selected/export',
             })
         })
     })
@@ -388,6 +421,29 @@ describe('DefaultProjectSettingsPage', () => {
                 workingCsvPath: savedCsvFileSettings.workingCsvPath,
                 backupFolderPath: savedCsvFileSettings.backupFolderPath,
                 savedProjectsFolderPath: 'D:/saved/projects',
+                exportCsvFolderPath: savedCsvFileSettings.exportCsvFolderPath,
+            })
+        })
+    })
+
+    it('persists exportCsvFolderPath when saving CSV file settings', async () => {
+        const user = userEvent.setup()
+        renderPage()
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Export CSV Folder')).toHaveValue(savedCsvFileSettings.exportCsvFolderPath)
+        })
+
+        await user.clear(screen.getByLabelText('Export CSV Folder'))
+        await user.type(screen.getByLabelText('Export CSV Folder'), 'D:/exports')
+        await user.click(screen.getAllByRole('button', { name: /Salve/ })[2])
+
+        await waitFor(() => {
+            expect(csvFileSettingsService.setCsvFileSettings).toHaveBeenCalledWith({
+                workingCsvPath: savedCsvFileSettings.workingCsvPath,
+                backupFolderPath: savedCsvFileSettings.backupFolderPath,
+                savedProjectsFolderPath: savedCsvFileSettings.savedProjectsFolderPath,
+                exportCsvFolderPath: 'D:/exports',
             })
         })
     })

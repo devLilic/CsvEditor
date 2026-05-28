@@ -2,7 +2,7 @@
 import { ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
-import type { RendererApi, UpdateStatus } from '../../src/shared/ipc-types'
+import type { EntityExportFailureNotification, RendererApi, UpdateStatus } from '../../src/shared/ipc-types'
 
 export const electronApi: RendererApi = {
     getLastCsv() {
@@ -102,6 +102,10 @@ export const electronApi: RendererApi = {
         return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SELECT_SAVED_PROJECTS_FOLDER)
     },
 
+    selectExportCsvFolder() {
+        return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SELECT_EXPORT_CSV_FOLDER)
+    },
+
     saveFinalPhoneImage(request) {
         return ipcRenderer.invoke(IPC_CHANNELS.PHONE_IMAGE_SAVE_FINAL, request)
     },
@@ -116,6 +120,18 @@ export const electronApi: RendererApi = {
 
     getPhoneImageDataUrl(request) {
         return ipcRenderer.invoke(IPC_CHANNELS.PHONE_IMAGE_GET_IMAGE_DATA_URL, request)
+    },
+
+    onEntityExportError(callback) {
+        const listener = (_event: IpcRendererEvent, notification: EntityExportFailureNotification) => {
+            callback(notification)
+        }
+
+        ipcRenderer.on(IPC_CHANNELS.ENTITY_EXPORT_ERROR, listener)
+
+        return () => {
+            ipcRenderer.removeListener(IPC_CHANNELS.ENTITY_EXPORT_ERROR, listener)
+        }
     },
 
     appUpdate: {

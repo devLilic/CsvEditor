@@ -141,7 +141,7 @@ async function createWindow() {
   // ✅ AICI ESTE LOCUL CORECT
   // =========================
   registerCsvHandlers(win)
-  registerCsvProjectHandlers()
+  registerCsvProjectHandlers(win)
   registerSettingsHandlers()
   registerPhoneImageHandlers()
   // =========================

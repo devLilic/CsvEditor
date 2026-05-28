@@ -59,4 +59,13 @@ export const csvFileSettingsService = {
             return null
         }
     },
+
+    async selectExportCsvFolder(): Promise<string | null> {
+        try {
+            const selectedPath = await getApi().selectExportCsvFolder()
+            return typeof selectedPath === 'string' ? selectedPath : null
+        } catch {
+            return null
+        }
+    },
 }
