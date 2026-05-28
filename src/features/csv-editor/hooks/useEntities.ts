@@ -19,7 +19,7 @@ type BlockItem =
 export type StartNewProjectResult =
     | { ok: true }
     | { ok: false; reason: 'BACKUP_FAILED'; error?: string }
-    | { ok: false; reason: 'RESET_FAILED'; error?: string }
+    | { ok: false; error?: string }
 
 export type ForceStartNewProjectWithoutBackupResult =
     | { ok: true }
@@ -171,11 +171,7 @@ export function useEntities() {
 
         const resetRes = await resetToDefaultProject()
         if (!resetRes.ok) {
-            return {
-                ok: false,
-                reason: 'RESET_FAILED',
-                error: resetRes.error,
-            }
+            return resetRes
         }
 
         return { ok: true }

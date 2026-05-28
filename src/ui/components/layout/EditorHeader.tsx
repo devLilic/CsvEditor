@@ -67,7 +67,7 @@ export function EditorHeader() {
         setIsBackupFailedDialogOpen(false)
         const result = await startNewProject()
         if (!result.ok) {
-            if (result.reason === 'BACKUP_FAILED') {
+            if ('reason' in result && result.reason === 'BACKUP_FAILED') {
                 setBackupFailedError(result.error)
                 setIsBackupFailedDialogOpen(true)
             }
