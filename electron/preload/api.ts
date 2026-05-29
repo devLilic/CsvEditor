@@ -122,6 +122,18 @@ export const electronApi: RendererApi = {
         return ipcRenderer.invoke(IPC_CHANNELS.PHONE_IMAGE_GET_IMAGE_DATA_URL, request)
     },
 
+    getUserTemplateDocument() {
+        return ipcRenderer.invoke(IPC_CHANNELS.TEMPLATE_EDITOR_GET_USER_TEMPLATE_DOCUMENT)
+    },
+
+    saveUserTemplateDocument(request) {
+        return ipcRenderer.invoke(IPC_CHANNELS.TEMPLATE_EDITOR_SAVE_USER_TEMPLATE_DOCUMENT, request)
+    },
+
+    saveDevDefaultTemplateDocument(request) {
+        return ipcRenderer.invoke(IPC_CHANNELS.TEMPLATE_EDITOR_SAVE_DEV_DEFAULT_TEMPLATE_DOCUMENT, request)
+    },
+
     onEntityExportError(callback) {
         const listener = (_event: IpcRendererEvent, notification: EntityExportFailureNotification) => {
             callback(notification)

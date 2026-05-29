@@ -8,6 +8,7 @@ import { registerCsvHandlers } from './csv-handlers'
 import { registerCsvProjectHandlers } from './csv-project-handlers'
 import { registerSettingsHandlers } from './settings-handlers'
 import { registerPhoneImageHandlers } from './phone-image-handlers'
+import { registerTemplateEditorHandlers } from './template-editor-handlers'
 import { IPC_CHANNELS } from '../../src/shared/ipc-channels'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -144,6 +145,7 @@ async function createWindow() {
   registerCsvProjectHandlers(win)
   registerSettingsHandlers()
   registerPhoneImageHandlers()
+  registerTemplateEditorHandlers()
   // =========================
 
   // Test actively push message to the Electron-Renderer

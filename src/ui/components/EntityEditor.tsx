@@ -11,7 +11,11 @@ import {
     useActiveEntityType,
 } from '@/features/csv-editor'
 import { phoneImageSettingsService } from '@/features/csv-editor/services/phoneImageSettingsService'
-import { createPreviewData, getTemplateForEntityType } from '@/templates/broadcast'
+import {
+    type EditableTemplateEntityType,
+    useTemplateDocument,
+} from '@/features/template-editor/state/TemplateDocumentProvider'
+import { createPreviewData } from '@/templates/broadcast'
 import { Preview16x9 } from './Preview16x9'
 import { QuickTitlesBar } from './QuickTitlesBar'
 import { InputField } from './common/InputField'
@@ -25,11 +29,20 @@ type FormState = {
     image?: string
 }
 
+function getTemplateKeyForViewType(entityType: string): EditableTemplateEntityType {
+    if (entityType === 'persons') return 'persons'
+    if (entityType === 'locations') return 'locations'
+    if (entityType === 'phoneCalls') return 'phoneCalls'
+
+    return 'titles'
+}
+
 export function EntityEditor() {
     const { activeSectionId, activeSection, getBlockItems, addEntity, updateEntity } = useEntities()
 
     const { selected, clearSelection } = useSelectedEntity()
     const { activeViewType } = useActiveEntityType()
+    const { document: templateDocument } = useTemplateDocument()
     const editorEntityType = getCsvEntityTypeForEditorView(activeViewType)
 
     const [showInvalid, setShowInvalid] = useState(false)
@@ -218,7 +231,7 @@ export function EntityEditor() {
         requestAnimationFrame(() => focusTitleInput())
     }
 
-    const previewTemplate = getTemplateForEntityType(activeViewType)
+    const previewTemplate = templateDocument.templates[getTemplateKeyForViewType(activeViewType)]
     const previewData = createPreviewData(activeViewType, form)
     const phoneImageFilename = form.image
         ? getPhoneImageDisplayFilename(form.image) || form.image

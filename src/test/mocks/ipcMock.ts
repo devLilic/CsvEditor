@@ -35,6 +35,9 @@ export const ipcMock = {
     loadPhoneImageDataUrl: vi.fn(),
     listWorkPathImages: vi.fn(),
     getPhoneImageDataUrl: vi.fn(),
+    getUserTemplateDocument: vi.fn(),
+    saveUserTemplateDocument: vi.fn(),
+    saveDevDefaultTemplateDocument: vi.fn(),
     onEntityExportError: vi.fn(() => vi.fn()),
 
     // App update

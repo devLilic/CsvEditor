@@ -3,6 +3,7 @@ import { IPC_CHANNELS } from './ipc-channels'
 import type { DefaultProjectSettings } from '../features/csv-editor/domain/defaultProjectSettings'
 import type { PhoneImageSettings } from '../features/csv-editor/domain/phoneImageSettings'
 import type { CsvFileSettings } from '../features/csv-editor/domain/csvFileSettings'
+import type { TemplateDocument } from '../features/template-editor/domain/templateDocument'
 
 export interface CsvFileDescriptor {
     path: string
@@ -152,6 +153,18 @@ export interface PhoneImageListWorkPathImagesResponse {
     error?: string
 }
 
+export type TemplateEditorGetUserTemplateDocumentResponse =
+    | { ok: true; document: TemplateDocument | null }
+    | { ok: false; error: 'INVALID_TEMPLATE_JSON' | string }
+
+export interface TemplateEditorSaveTemplateDocumentRequest {
+    document: TemplateDocument
+}
+
+export type TemplateEditorSaveTemplateDocumentResponse =
+    | { ok: true; skipped?: boolean }
+    | { ok: false; error: string }
+
 export interface IpcInvokeMap {
     [IPC_CHANNELS.CSV_GET_LAST]: {
         request: void
@@ -298,6 +311,21 @@ export interface IpcInvokeMap {
         response: PhoneImageGetImageDataUrlResponse
     }
 
+    [IPC_CHANNELS.TEMPLATE_EDITOR_GET_USER_TEMPLATE_DOCUMENT]: {
+        request: void
+        response: TemplateEditorGetUserTemplateDocumentResponse
+    }
+
+    [IPC_CHANNELS.TEMPLATE_EDITOR_SAVE_USER_TEMPLATE_DOCUMENT]: {
+        request: TemplateEditorSaveTemplateDocumentRequest
+        response: TemplateEditorSaveTemplateDocumentResponse
+    }
+
+    [IPC_CHANNELS.TEMPLATE_EDITOR_SAVE_DEV_DEFAULT_TEMPLATE_DOCUMENT]: {
+        request: TemplateEditorSaveTemplateDocumentRequest
+        response: TemplateEditorSaveTemplateDocumentResponse
+    }
+
     [IPC_CHANNELS.UPDATE_GET_CURRENT_VERSION]: {
         request: void
         response: string
@@ -361,6 +389,10 @@ export interface RendererApi {
     loadPhoneImageDataUrl(request: IpcRequest<typeof IPC_CHANNELS.PHONE_IMAGE_LOAD_DATA_URL>): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_LOAD_DATA_URL>>
     listWorkPathImages(): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_LIST_WORK_PATH_IMAGES>>
     getPhoneImageDataUrl(request: IpcRequest<typeof IPC_CHANNELS.PHONE_IMAGE_GET_IMAGE_DATA_URL>): Promise<IpcResponse<typeof IPC_CHANNELS.PHONE_IMAGE_GET_IMAGE_DATA_URL>>
+
+    getUserTemplateDocument(): Promise<IpcResponse<typeof IPC_CHANNELS.TEMPLATE_EDITOR_GET_USER_TEMPLATE_DOCUMENT>>
+    saveUserTemplateDocument(request: IpcRequest<typeof IPC_CHANNELS.TEMPLATE_EDITOR_SAVE_USER_TEMPLATE_DOCUMENT>): Promise<IpcResponse<typeof IPC_CHANNELS.TEMPLATE_EDITOR_SAVE_USER_TEMPLATE_DOCUMENT>>
+    saveDevDefaultTemplateDocument(request: IpcRequest<typeof IPC_CHANNELS.TEMPLATE_EDITOR_SAVE_DEV_DEFAULT_TEMPLATE_DOCUMENT>): Promise<IpcResponse<typeof IPC_CHANNELS.TEMPLATE_EDITOR_SAVE_DEV_DEFAULT_TEMPLATE_DOCUMENT>>
 
     onEntityExportError(callback: (notification: EntityExportFailureNotification) => void): () => void
 

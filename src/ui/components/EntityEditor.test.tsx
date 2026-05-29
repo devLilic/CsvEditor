@@ -1,8 +1,10 @@
 import { cleanup, render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EntityEditor } from './EntityEditor'
 import { EditModeProvider } from '@/ui/context/EditModeContext'
+import { TemplateDocumentProvider } from '@/features/template-editor/state/TemplateDocumentProvider'
 
 const csvHooks = vi.hoisted(() => ({
     activeEntityType: 'titles' as
@@ -134,8 +136,18 @@ afterEach(() => {
 
 function renderEntityEditor() {
     return render(
-        <EditModeProvider>
+        <TestProviders>
             <EntityEditor />
+        </TestProviders>
+    )
+}
+
+function TestProviders({ children }: { children: ReactNode }) {
+    return (
+        <EditModeProvider>
+            <TemplateDocumentProvider>
+                {children}
+            </TemplateDocumentProvider>
         </EditModeProvider>
     )
 }
@@ -524,9 +536,9 @@ describe('EntityEditor', () => {
 
         csvHooks.activeEntityType = 'waitLocations'
         rerender(
-            <EditModeProvider>
+            <TestProviders>
                 <EntityEditor />
-            </EditModeProvider>
+            </TestProviders>
         )
 
         expect(screen.queryByLabelText('Titlu')).not.toBeInTheDocument()
@@ -543,9 +555,9 @@ describe('EntityEditor', () => {
 
         csvHooks.activeEntityType = 'waitTitles'
         rerender(
-            <EditModeProvider>
+            <TestProviders>
                 <EntityEditor />
-            </EditModeProvider>
+            </TestProviders>
         )
 
         expect(container.querySelector('[data-layer-id="title-main-text"]')).toBeInTheDocument()
@@ -553,9 +565,9 @@ describe('EntityEditor', () => {
 
         csvHooks.activeEntityType = 'waitLocations'
         rerender(
-            <EditModeProvider>
+            <TestProviders>
                 <EntityEditor />
-            </EditModeProvider>
+            </TestProviders>
         )
 
         expect(container.querySelector('[data-layer-id="title-main-text"]')).toBeInTheDocument()
@@ -564,16 +576,16 @@ describe('EntityEditor', () => {
 
     it('changing the active entity type does not crash', () => {
         const { rerender } = render(
-            <EditModeProvider>
+            <TestProviders>
                 <EntityEditor />
-            </EditModeProvider>
+            </TestProviders>
         )
 
         csvHooks.activeEntityType = 'persons'
         rerender(
-            <EditModeProvider>
+            <TestProviders>
                 <EntityEditor />
-            </EditModeProvider>
+            </TestProviders>
         )
 
         expect(screen.getByLabelText('Nume')).toBeInTheDocument()

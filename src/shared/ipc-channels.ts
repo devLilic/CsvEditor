@@ -35,6 +35,10 @@ export const IPC_CHANNELS = {
     PHONE_IMAGE_LIST_WORK_PATH_IMAGES: "phone-image:list-work-path-images",
     PHONE_IMAGE_GET_IMAGE_DATA_URL: "phone-image:get-image-data-url",
 
+    TEMPLATE_EDITOR_GET_USER_TEMPLATE_DOCUMENT: "template-editor:get-user-template-document",
+    TEMPLATE_EDITOR_SAVE_USER_TEMPLATE_DOCUMENT: "template-editor:save-user-template-document",
+    TEMPLATE_EDITOR_SAVE_DEV_DEFAULT_TEMPLATE_DOCUMENT: "template-editor:save-dev-default-template-document",
+
     ENTITY_EXPORT_ERROR: "entity-export:error",
 
     UPDATE_GET_CURRENT_VERSION: "update:get-current-version",
