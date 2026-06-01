@@ -172,6 +172,7 @@ describe('useEntities startNewProject', () => {
 
     it('returns a failure result when backup fails and does not write', async () => {
         const user = userEvent.setup()
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
         const backupSpy = vi.spyOn(csvService, 'createBackup').mockResolvedValue({ ok: false, error: 'BACKUP_FAILED' })
         const writeSpy = vi.spyOn(csvService, 'write').mockResolvedValue({ ok: true })
         const getSettingsSpy = vi.spyOn(defaultProjectSettingsService, 'getDefaultProjectSettings').mockResolvedValue(FALLBACK_DEFAULT_PROJECT_SETTINGS)
@@ -203,6 +204,7 @@ describe('useEntities startNewProject', () => {
             reason: 'BACKUP_FAILED',
             error: 'BACKUP_FAILED',
         })
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Backup failed:', 'BACKUP_FAILED')
     })
 
     it('force starts a new project without creating backup', async () => {
@@ -251,7 +253,9 @@ describe('useEntities startNewProject', () => {
 
     it('uses fallback settings when default project settings cannot be read', async () => {
         const user = userEvent.setup()
-        vi.spyOn(defaultProjectSettingsService, 'getDefaultProjectSettings').mockRejectedValue(new Error('SETTINGS_FAILED'))
+        const settingsError = new Error('SETTINGS_FAILED')
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        vi.spyOn(defaultProjectSettingsService, 'getDefaultProjectSettings').mockRejectedValue(settingsError)
         vi.spyOn(csvService, 'createBackup').mockResolvedValue({ ok: true })
         const writeSpy = vi.spyOn(csvService, 'write').mockResolvedValue({ ok: true })
         const resultSpy = vi.fn()
@@ -275,10 +279,12 @@ describe('useEntities startNewProject', () => {
         expect(writtenCsv).toContain(FALLBACK_DEFAULT_PROJECT_SETTINGS.personName)
         expect(writtenCsv).toContain(FALLBACK_DEFAULT_PROJECT_SETTINGS.personOccupation)
         expect(writtenCsv).toContain(FALLBACK_DEFAULT_PROJECT_SETTINGS.location)
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to read default project settings:', settingsError)
     })
 
     it('returns a failure result when write fails', async () => {
         const user = userEvent.setup()
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
         vi.spyOn(csvService, 'createBackup').mockResolvedValue({ ok: true })
         vi.spyOn(csvService, 'write').mockResolvedValue({ ok: false, error: 'WRITE_FAILED' })
         const resultSpy = vi.fn()
@@ -300,5 +306,6 @@ describe('useEntities startNewProject', () => {
                 error: 'Write failed: WRITE_FAILED',
             })
         })
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to write empty CSV:', 'WRITE_FAILED')
     })
 })
