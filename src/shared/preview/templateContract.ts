@@ -24,6 +24,16 @@ export type BaseLayer = {
     visible?: boolean
     opacity?: number
     rotation?: number
+    rotationOrigin?:
+        | 'top left'
+        | 'top center'
+        | 'top right'
+        | 'center left'
+        | 'center center'
+        | 'center right'
+        | 'bottom left'
+        | 'bottom center'
+        | 'bottom right'
 }
 
 export type BroadcastTextLayer = BaseLayer & {

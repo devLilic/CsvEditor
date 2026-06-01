@@ -204,4 +204,68 @@ describe('TemplateDocumentProvider', () => {
 
         expect(result.current.isDirty).toBe(true)
     })
+
+    it('discards unsaved changes and restores the last clean document', async () => {
+        const bundledDefaultDocument = createDocument('bundled')
+        const { result } = renderTemplateDocumentProvider({ bundledDefaultDocument })
+        await waitForLoaded(result)
+
+        act(() => {
+            result.current.updateTemplate('titles', createTemplates('updated').titles)
+        })
+        expect(result.current.document.templates.titles.id).toBe('updated-titles')
+
+        act(() => {
+            result.current.discardUnsavedChanges()
+        })
+
+        expect(result.current.document.templates.titles.id).toBe('bundled-titles')
+        expect(result.current.isDirty).toBe(false)
+    })
+
+    it('returns a warning and stays clean when local save succeeds but dev default save fails', async () => {
+        serviceMock.saveDevDefaultTemplateDocument.mockResolvedValueOnce({
+            ok: false,
+            error: 'DEV_DEFAULT_WRITE_FAILED',
+        })
+        const { result } = renderTemplateDocumentProvider({
+            bundledDefaultDocument: createDocument('bundled'),
+        })
+        await waitForLoaded(result)
+
+        act(() => {
+            result.current.updateTemplate('titles', createTemplates('updated').titles)
+        })
+
+        await act(async () => {
+            const saveResult = await result.current.saveTemplates()
+            expect(saveResult).toEqual({
+                ok: true,
+                warning: 'Template-urile au fost salvate local, dar defaultTemplates.oc.json nu a putut fi actualizat.',
+            })
+        })
+
+        expect(serviceMock.saveUserTemplateDocument).toHaveBeenCalledOnce()
+        expect(result.current.isDirty).toBe(false)
+    })
+
+    it('does not warn when production skips the dev default save', async () => {
+        serviceMock.saveDevDefaultTemplateDocument.mockResolvedValueOnce({
+            ok: true,
+            skipped: true,
+        })
+        const { result } = renderTemplateDocumentProvider({
+            bundledDefaultDocument: createDocument('bundled'),
+        })
+        await waitForLoaded(result)
+
+        act(() => {
+            result.current.updateTemplate('titles', createTemplates('updated').titles)
+        })
+
+        await act(async () => {
+            const saveResult = await result.current.saveTemplates()
+            expect(saveResult).toEqual({ ok: true })
+        })
+    })
 })

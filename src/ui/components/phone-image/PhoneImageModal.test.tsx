@@ -239,7 +239,7 @@ describe('PhoneImageModal', () => {
             />
         )
 
-        expect(await screen.findByText('WORK_PATH nu este setat.')).toBeInTheDocument()
+        expect(await screen.findByText('Folderul pentru imagini telefonice nu este setat.')).toBeInTheDocument()
     })
 
     it('shows a clear message when there are no existing jpg images', async () => {
@@ -257,7 +257,7 @@ describe('PhoneImageModal', () => {
             />
         )
 
-        expect(await screen.findByText('Nu există poze .jpg în WORK_PATH.')).toBeInTheDocument()
+        expect(await screen.findByText('Nu există poze .jpg în folderul pentru imagini telefonice.')).toBeInTheDocument()
     })
 
     it('loads a thumbnail only for the selected existing image', async () => {

@@ -120,15 +120,15 @@ export function PhoneImageModal({
         if (existingImagesStatus === 'loading') return 'Se încarcă pozele existente...'
         if (existingImagesStatus === 'error') {
             if (existingImagesError === 'WORK_PATH_NOT_SET') {
-                return 'WORK_PATH nu este setat.'
+                return 'Folderul pentru imagini telefonice nu este setat.'
             }
             if (existingImagesError === 'WORK_PATH_NOT_FOUND') {
-                return 'Folderul WORK_PATH nu există.'
+                return 'Folderul pentru imagini telefonice nu există.'
             }
             return 'Pozele existente nu au putut fi încărcate.'
         }
         if (existingImagesStatus === 'loaded' && existingImages.length === 0) {
-            return 'Nu există poze .jpg în WORK_PATH.'
+            return 'Nu există poze .jpg în folderul pentru imagini telefonice.'
         }
         return null
     })()

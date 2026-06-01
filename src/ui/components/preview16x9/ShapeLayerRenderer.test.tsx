@@ -42,8 +42,19 @@ describe('ShapeLayerRenderer', () => {
         expect(shape).toHaveStyle({
             opacity: '0.75',
             transform: 'rotate(12deg)',
+            transformOrigin: 'center center',
             backgroundColor: '#ff0000',
             borderRadius: '8px',
+        })
+    })
+
+    it('rotates from the configured origin point', () => {
+        const { container } = render(
+            <ShapeLayerRenderer layer={{ ...baseLayer, rotationOrigin: 'bottom right' }} />
+        )
+
+        expect(container.querySelector('[data-layer-id="shape-1"]')).toHaveStyle({
+            transformOrigin: 'bottom right',
         })
     })
 })

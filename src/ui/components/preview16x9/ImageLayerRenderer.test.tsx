@@ -61,6 +61,19 @@ describe('ImageLayerRenderer', () => {
         expect(container.querySelector('img')).toHaveStyle({ objectFit: 'fill' })
     })
 
+    it('rotates from the configured origin point', () => {
+        const { container } = render(
+            <ImageLayerRenderer
+                layer={{ ...baseLayer, rotation: 10, rotationOrigin: 'top right' }}
+            />
+        )
+
+        expect(container.querySelector('img')).toHaveStyle({
+            transform: 'rotate(10deg)',
+            transformOrigin: 'top right',
+        })
+    })
+
     it('does not crash and renders a discrete placeholder when src is empty', () => {
         const { container } = render(
             <ImageLayerRenderer layer={{ ...baseLayer, src: '' }} />

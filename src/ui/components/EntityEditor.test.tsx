@@ -24,6 +24,7 @@ const csvHooks = vi.hoisted(() => ({
     selected: null as null | { sectionId: string; entityType: 'persons'; id: string },
     getBlockItems: vi.fn(() => []),
     phoneImageModalProps: null as any,
+    quickTitles: [] as string[],
 }))
 
 const phoneImageServiceMock = vi.hoisted(() => ({
@@ -54,7 +55,7 @@ vi.mock('@/features/csv-editor', async (importOriginal) => {
             setActiveEntityType: csvHooks.setActiveEntityType,
         }),
         useQuickTitles: () => ({
-            quickTitles: [],
+            quickTitles: csvHooks.quickTitles,
             addQuickTitle: vi.fn(),
             removeQuickTitle: vi.fn(),
         }),
@@ -110,6 +111,7 @@ beforeEach(() => {
     csvHooks.getBlockItems.mockReset()
     csvHooks.getBlockItems.mockReturnValue([])
     csvHooks.phoneImageModalProps = null
+    csvHooks.quickTitles = []
     phoneImageServiceMock.loadPhoneImageDataUrl.mockReset()
     phoneImageServiceMock.loadPhoneImageDataUrl.mockResolvedValue({
         ok: true,
@@ -224,6 +226,20 @@ describe('EntityEditor', () => {
         expect(titleInput).toHaveValue('Breaking News')
         expect(screen.getByText('BREAKING NEWS')).toBeInTheDocument()
         expect(addButton).toBeEnabled()
+    })
+
+    it('inserts a quick title with colon-space and places the cursor after the space', async () => {
+        csvHooks.quickTitles = ['breaking:']
+        const user = userEvent.setup()
+        renderEntityEditor()
+
+        await user.click(screen.getByRole('button', { name: 'BREAKING:' }))
+
+        const titleInput = screen.getByLabelText('Titlu') as HTMLInputElement
+        expect(titleInput).toHaveValue('BREAKING: ')
+        expect(titleInput).toHaveFocus()
+        expect(titleInput.selectionStart).toBe('BREAKING: '.length)
+        expect(titleInput.selectionEnd).toBe('BREAKING: '.length)
     })
 
     it('saving a valid title calls addEntity with the active section and payload', async () => {

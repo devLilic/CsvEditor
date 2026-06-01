@@ -25,7 +25,7 @@ describe('tedSampleData', () => {
         expect(createTedSampleData('phoneCalls')).toEqual({
             name: 'SAMPLE NAME',
             occupation: 'Sample occupation',
-            image: 'WORK_PATH/sample-phone.jpg',
+            image: '',
         })
     })
 
@@ -47,7 +47,7 @@ describe('tedSampleData', () => {
         })).toEqual({
             name: 'SAMPLE NAME',
             occupation: 'Sample occupation',
-            image: 'WORK_PATH/sample-phone.jpg',
+            image: '',
         })
     })
 })

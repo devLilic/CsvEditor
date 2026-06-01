@@ -25,6 +25,3 @@ export function buildSuggestedPhoneImageFilename(name: string): string {
     return sanitizeJpegFilename(name.trim() || 'phone_call')
 }
 
-export function buildPhoneImageCsvValue(filename: string): string {
-    return `WORK_PATH/${ensureJpgExtension(filename)}`
-}

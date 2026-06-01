@@ -111,6 +111,19 @@ describe('TextLayerRenderer', () => {
         })
     })
 
+    it('rotates the text layer from its configured origin point', () => {
+        const { container } = render(
+            <TextLayerRenderer
+                layer={{ ...baseLayer, rotationOrigin: 'top left' }}
+                data={{ title: 'Live title' }}
+            />
+        )
+
+        expect(container.querySelector('[data-layer-id="text-1"]')).toHaveStyle({
+            transformOrigin: 'top left',
+        })
+    })
+
     it('uses fallback text when data is missing', () => {
         render(<TextLayerRenderer layer={baseLayer} data={{}} />)
 

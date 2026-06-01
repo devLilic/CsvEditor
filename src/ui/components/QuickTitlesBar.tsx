@@ -8,6 +8,13 @@ interface QuickTitlesBarProps {
     focusEditor: () => void
 }
 
+export function normalizeQuickTitle(value: string): string {
+    const trimmed = value.trim()
+    if (!trimmed) return ''
+
+    return trimmed.endsWith(':') ? trimmed : `${trimmed}:`
+}
+
 export function QuickTitlesBar({
                                    onApplyPrefix,
                                    focusEditor,
@@ -23,8 +30,8 @@ export function QuickTitlesBar({
     const inputRef = useRef<HTMLInputElement>(null)
 
     const handleCreate = async () => {
-        const value = inputRef.current?.value ?? ''
-        if (!value.trim()) return
+        const value = normalizeQuickTitle(inputRef.current?.value ?? '')
+        if (!value) return
 
         await addQuickTitle(value)
         inputRef.current!.value = ''

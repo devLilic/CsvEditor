@@ -13,6 +13,11 @@ const {
     saveCurrentAsProjectMock,
     loadProjectIntoWorkingCsvMock,
     deleteSavedProjectMock,
+    toggleTedModeMock,
+    setTedModeMock,
+    discardUnsavedChangesMock,
+    saveTemplatesMock,
+    headerModeState,
 } = vi.hoisted(() => ({
     startNewProjectMock: vi.fn(),
     forceStartNewProjectWithoutBackupMock: vi.fn(),
@@ -22,6 +27,15 @@ const {
     saveCurrentAsProjectMock: vi.fn(),
     loadProjectIntoWorkingCsvMock: vi.fn(),
     deleteSavedProjectMock: vi.fn(),
+    toggleTedModeMock: vi.fn(),
+    setTedModeMock: vi.fn(),
+    discardUnsavedChangesMock: vi.fn(),
+    saveTemplatesMock: vi.fn(),
+    headerModeState: {
+        editMode: false,
+        isTedMode: false,
+        isTemplateDirty: false,
+    },
 }))
 
 vi.mock('@/features/csv-editor', () => ({
@@ -43,7 +57,33 @@ vi.mock('@/ui/components/SectionsTabs', () => ({
 }))
 
 vi.mock('@/ui/components/EditModeToggle', () => ({
-    EditModeToggle: () => <button>Edit Mode OFF</button>,
+    EditModeToggle: () => (
+        <button disabled={headerModeState.isTedMode}>
+            Edit Mode {headerModeState.editMode ? 'ON' : 'OFF'}
+        </button>
+    ),
+}))
+
+vi.mock('@/ui/context/EditModeContext', () => ({
+    useEditMode: () => ({
+        editMode: headerModeState.editMode,
+    }),
+}))
+
+vi.mock('@/ui/context/TedModeContext', () => ({
+    useTedMode: () => ({
+        isTedMode: headerModeState.isTedMode,
+        toggleTedMode: toggleTedModeMock,
+        setTedMode: setTedModeMock,
+    }),
+}))
+
+vi.mock('@/features/template-editor/state/TemplateDocumentProvider', () => ({
+    useTemplateDocument: () => ({
+        isDirty: headerModeState.isTemplateDirty,
+        discardUnsavedChanges: discardUnsavedChangesMock,
+        saveTemplates: saveTemplatesMock,
+    }),
 }))
 
 vi.mock('@/features/csv-editor/context/CsvContext', () => ({
@@ -93,6 +133,14 @@ describe('EditorHeader', () => {
         saveCurrentAsProjectMock.mockClear()
         loadProjectIntoWorkingCsvMock.mockClear()
         deleteSavedProjectMock.mockClear()
+        toggleTedModeMock.mockClear()
+        setTedModeMock.mockClear()
+        discardUnsavedChangesMock.mockClear()
+        saveTemplatesMock.mockReset()
+        saveTemplatesMock.mockResolvedValue({ ok: true })
+        headerModeState.editMode = false
+        headerModeState.isTedMode = false
+        headerModeState.isTemplateDirty = false
         startNewProjectMock.mockResolvedValue({ ok: true })
         forceStartNewProjectWithoutBackupMock.mockResolvedValue({ ok: true })
         listSavedProjectsMock.mockResolvedValue({
@@ -149,6 +197,165 @@ describe('EditorHeader', () => {
 
         expect(badge.compareDocumentPosition(editMode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
         expect(editMode.compareDocumentPosition(newProject) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+
+    it('does not show EDIT Templates while Edit Mode is off', () => {
+        render(<EditorHeader />)
+
+        expect(screen.queryByRole('button', { name: 'EDIT Templates' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Exit Templates' })).not.toBeInTheDocument()
+    })
+
+    it('shows EDIT Templates before the CSV badge while Edit Mode is on', () => {
+        headerModeState.editMode = true
+        render(<EditorHeader />)
+
+        const templatesButton = screen.getByRole('button', { name: 'EDIT Templates' })
+        const badge = screen.getByText('CSV: emisie.csv')
+
+        expect(
+            templatesButton.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy()
+    })
+
+    it('toggles TED mode from EDIT Templates', async () => {
+        headerModeState.editMode = true
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'EDIT Templates' }))
+
+        expect(setTedModeMock).toHaveBeenCalledWith(true)
+    })
+
+    it('shows Exit Templates while TED mode is on', () => {
+        headerModeState.editMode = true
+        headerModeState.isTedMode = true
+        render(<EditorHeader />)
+
+        expect(screen.getByRole('button', { name: 'Exit Templates' })).toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'EDIT Templates' })).not.toBeInTheDocument()
+    })
+
+    it('disables the Edit Mode toggle while TED mode is on', () => {
+        headerModeState.editMode = true
+        headerModeState.isTedMode = true
+        render(<EditorHeader />)
+
+        expect(screen.getByRole('button', { name: 'Edit Mode ON' })).toBeDisabled()
+    })
+
+    it('enables the Edit Mode toggle after TED mode is off', () => {
+        headerModeState.editMode = true
+        headerModeState.isTedMode = false
+        render(<EditorHeader />)
+
+        expect(screen.getByRole('button', { name: 'Edit Mode ON' })).toBeEnabled()
+    })
+
+    it('exits TED immediately when templates are clean', async () => {
+        headerModeState.editMode = true
+        headerModeState.isTedMode = true
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Exit Templates' }))
+
+        expect(setTedModeMock).toHaveBeenCalledWith(false)
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('asks before leaving TED with unsaved template changes', async () => {
+        headerModeState.editMode = true
+        headerModeState.isTedMode = true
+        headerModeState.isTemplateDirty = true
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Exit Templates' }))
+
+        expect(screen.getByRole('dialog')).toHaveTextContent('Ai modificări nesalvate în template.')
+        expect(setTedModeMock).not.toHaveBeenCalled()
+    })
+
+    it('discards unsaved changes before leaving TED without saving', async () => {
+        headerModeState.editMode = true
+        headerModeState.isTedMode = true
+        headerModeState.isTemplateDirty = true
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Exit Templates' }))
+        await user.click(screen.getByRole('button', { name: 'Ieși fără salvare' }))
+
+        expect(discardUnsavedChangesMock).toHaveBeenCalledOnce()
+        expect(setTedModeMock).toHaveBeenCalledWith(false)
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('keeps TED open when the user cancels exiting with unsaved changes', async () => {
+        headerModeState.editMode = true
+        headerModeState.isTedMode = true
+        headerModeState.isTemplateDirty = true
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Exit Templates' }))
+        await user.click(screen.getByRole('button', { name: 'Anulează' }))
+
+        expect(setTedModeMock).not.toHaveBeenCalled()
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('saves templates and leaves TED after a successful save', async () => {
+        headerModeState.editMode = true
+        headerModeState.isTedMode = true
+        headerModeState.isTemplateDirty = true
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Exit Templates' }))
+        await user.click(screen.getByRole('button', { name: 'Salvează și ieși' }))
+
+        expect(saveTemplatesMock).toHaveBeenCalledOnce()
+        expect(setTedModeMock).toHaveBeenCalledWith(false)
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('shows a warning after leaving TED when local save succeeds but dev default update fails', async () => {
+        headerModeState.editMode = true
+        headerModeState.isTedMode = true
+        headerModeState.isTemplateDirty = true
+        saveTemplatesMock.mockResolvedValueOnce({
+            ok: true,
+            warning: 'Template-urile au fost salvate local, dar defaultTemplates.oc.json nu a putut fi actualizat.',
+        })
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Exit Templates' }))
+        await user.click(screen.getByRole('button', { name: 'Salvează și ieși' }))
+
+        expect(screen.getByRole('status')).toHaveTextContent(
+            'Template-urile au fost salvate local, dar defaultTemplates.oc.json nu a putut fi actualizat.'
+        )
+        expect(setTedModeMock).toHaveBeenCalledWith(false)
+    })
+
+    it('keeps TED open and shows the error when saving templates fails', async () => {
+        headerModeState.editMode = true
+        headerModeState.isTedMode = true
+        headerModeState.isTemplateDirty = true
+        saveTemplatesMock.mockResolvedValueOnce({ ok: false, error: 'SAVE_FAILED' })
+        const user = userEvent.setup()
+        render(<EditorHeader />)
+
+        await user.click(screen.getByRole('button', { name: 'Exit Templates' }))
+        await user.click(screen.getByRole('button', { name: 'Salvează și ieși' }))
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('SAVE_FAILED')
+        expect(setTedModeMock).not.toHaveBeenCalled()
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
 
     it('uses the new confirmation dialog text', async () => {

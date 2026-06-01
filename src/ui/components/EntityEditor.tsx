@@ -223,8 +223,9 @@ export function EntityEditor() {
     const applyQuickTitle = (prefix: string) => {
         setForm((prev) => {
             const current = prev.title ?? ''
-            const cleaned = current.replace(/^[^:]+:\s*/, '')
-            const nextTitle = `${prefix} ${cleaned}`.trim()
+            const cleaned = current.replace(/^[^:]+:\s*/, '').trimStart()
+            const normalizedPrefix = prefix.trim().replace(/:\s*$/, '').toUpperCase()
+            const nextTitle = `${normalizedPrefix}: ${cleaned}`
             return { ...prev, title: nextTitle }
         })
 

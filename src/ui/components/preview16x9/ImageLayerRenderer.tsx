@@ -79,6 +79,7 @@ export function ImageLayerRenderer({ layer, data, sampleData }: ImageLayerRender
                     height: layer.height,
                     opacity: layer.opacity,
                     transform: layer.rotation ? `rotate(${layer.rotation}deg)` : undefined,
+                    transformOrigin: layer.rotationOrigin ?? 'center center',
                     overflow: 'hidden',
                     backgroundColor: 'rgba(0, 0, 0, 0.08)',
                 }}
@@ -99,6 +100,7 @@ export function ImageLayerRenderer({ layer, data, sampleData }: ImageLayerRender
                 height: layer.height,
                 opacity: layer.opacity,
                 transform: layer.rotation ? `rotate(${layer.rotation}deg)` : undefined,
+                transformOrigin: layer.rotationOrigin ?? 'center center',
                 objectFit,
                 display: 'block',
                 overflow: 'hidden',

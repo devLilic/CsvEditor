@@ -88,6 +88,7 @@ export function TextLayerRenderer({ layer, data, sampleData }: TextLayerRenderer
                 height: layer.height,
                 opacity: layer.opacity,
                 transform: layer.rotation ? `rotate(${layer.rotation}deg)` : undefined,
+                transformOrigin: layer.rotationOrigin ?? 'center center',
                 overflow: 'hidden',
                 color: layer.textStyle.color,
                 fontFamily: layer.textStyle.fontFamily,

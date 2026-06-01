@@ -3,9 +3,14 @@ import { useCallback, useEffect } from 'react'
 import { EntityList } from '../EntityList'
 import { EntityEditor } from '../EntityEditor'
 import { EntityTypeTabsLeft } from '../EntityTypeTabsLeft'
+import { TemplateEditorPanel } from '../template-editor/TemplateEditorPanel'
+import { TedPreviewOnlyPanel } from '../template-editor/TedPreviewOnlyPanel'
+import { mergeTedSampleData } from '@/features/template-editor/domain/tedSampleData'
+import { useTemplateDocument } from '@/features/template-editor/state/TemplateDocumentProvider'
 import { settingsService } from '@/features/csv-editor/services/settingsService'
 import type { AppConfig } from '@/shared/ipc-types'
 import { useResizablePanel } from '@/ui/hooks/useResizablePanel'
+import { useTedMode } from '@/ui/context/TedModeContext'
 
 const DEFAULT_LEFT_PANEL_WIDTH = 700
 const MIN_LEFT_PANEL_WIDTH = 420
@@ -42,6 +47,14 @@ function createConfigWithLeftPanelWidth(config: AppConfig, leftPanelWidth: numbe
 }
 
 export function EditorBody() {
+    const {
+        isTedMode,
+        activeTedEntityType,
+        tedSampleOverrides,
+    } = useTedMode()
+    const { document: templateDocument } = useTemplateDocument()
+    const tedSampleData = mergeTedSampleData(activeTedEntityType, tedSampleOverrides)
+    const tedTemplate = templateDocument.templates[activeTedEntityType]
     const saveLeftPanelWidth = useCallback(async (nextWidth: number) => {
         const currentConfig = await settingsService.getConfig()
         await settingsService.setConfig(createConfigWithLeftPanelWidth(
@@ -95,13 +108,17 @@ export function EditorBody() {
         >
             {/* LEFT */}
             <div className="bg-white rounded border p-3 flex flex-col min-h-0 min-w-0">
-                <div className="pb-3 border-b">
-                    <EntityTypeTabsLeft />
-                </div>
+                {!isTedMode && (
+                    <div className="pb-3 border-b">
+                        <EntityTypeTabsLeft />
+                    </div>
+                )}
 
                 {/* IMPORTANT: min-h-0 + flex-1 ca să permită scroll intern */}
                 <div className="pt-3 flex-1 min-h-0 min-w-0">
-                    <EntityList />
+                    {isTedMode
+                        ? <TemplateEditorPanel isTedMode />
+                        : <EntityList />}
                 </div>
             </div>
 
@@ -117,7 +134,9 @@ export function EditorBody() {
 
             {/* RIGHT */}
             <div className="min-h-0 min-w-0 overflow-hidden">
-                <EntityEditor />
+                {isTedMode
+                    ? <TedPreviewOnlyPanel template={tedTemplate} sampleData={tedSampleData} />
+                    : <EntityEditor />}
             </div>
         </div>
     )

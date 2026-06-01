@@ -1,10 +1,6 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
 import type { PhoneImageSettings } from '@/features/csv-editor'
-import {
-    buildPhoneImageCsvValue,
-    phoneImageService,
-    sanitizeJpegFilename,
-} from '@/features/csv-editor'
+import { phoneImageService, sanitizeJpegFilename } from '@/features/csv-editor'
 import {
     calculateInitialCoverTransform,
     calculateRenderedImageRect,
@@ -285,7 +281,7 @@ export function PhoneImageEditor({
                 return
             }
 
-            onSaved(result.imageCsvValue || buildPhoneImageCsvValue(finalFilename))
+            onSaved(result.imageCsvValue)
         } finally {
             setIsSaving(false)
         }

@@ -18,6 +18,7 @@ export function ShapeLayerRenderer({ layer }: ShapeLayerRendererProps) {
                 height: layer.height,
                 opacity: layer.opacity,
                 transform: layer.rotation ? `rotate(${layer.rotation}deg)` : undefined,
+                transformOrigin: layer.rotationOrigin ?? 'center center',
                 backgroundColor: layer.fill.value,
                 borderRadius: layer.borderRadius ?? 0,
             }}

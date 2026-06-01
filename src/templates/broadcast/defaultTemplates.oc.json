@@ -163,8 +163,8 @@
           "shapeType": "rect",
           "x": 450,
           "y": 840,
-          "width": 0,
-          "height": 0,
+          "width": 376,
+          "height": 579,
           "zIndex": 1,
           "visible": false,
           "fill": {
@@ -214,14 +214,14 @@
           "id": "phone-call-photo-frame",
           "type": "shape",
           "shapeType": "rect",
-          "x": 159,
-          "y": 220,
+          "x": 160,
+          "y": 217,
           "width": 411,
-          "height": 511,
+          "height": 512,
           "zIndex": 1,
           "fill": {
             "type": "solid",
-            "value": "transparent"
+            "value": "#ffffff"
           },
           "borderRadius": 4
         },
@@ -230,8 +230,8 @@
           "type": "image",
           "x": 161,
           "y": 218,
-          "width": 411,
-          "height": 511,
+          "width": 409,
+          "height": 509,
           "zIndex": 2,
           "src": "{image}",
           "objectFit": "cover"
@@ -249,7 +249,8 @@
             "type": "solid",
             "value": "#c70018"
           },
-          "borderRadius": 2
+          "borderRadius": 2,
+          "visible": false
         },
         {
           "id": "phone-call-lower-third",
@@ -264,7 +265,8 @@
             "type": "solid",
             "value": "#fff"
           },
-          "borderRadius": 2
+          "borderRadius": 2,
+          "visible": false
         },
         {
           "id": "phone-call-name-text",

@@ -16,7 +16,7 @@ const TED_SAMPLE_DATA: Record<TedEntityType, TedSampleData> = {
     phoneCalls: {
         name: 'SAMPLE NAME',
         occupation: 'Sample occupation',
-        image: 'WORK_PATH/sample-phone.jpg',
+        image: '',
     },
 }
 

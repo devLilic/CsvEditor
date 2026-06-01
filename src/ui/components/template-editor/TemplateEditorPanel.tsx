@@ -1,42 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { BroadcastTemplate } from '@/shared/preview/templateContract'
 import {
     type EditableTemplateEntityType,
     useTemplateDocument,
 } from '@/features/template-editor/state/TemplateDocumentProvider'
-import type { TedEntityType } from '@/features/template-editor/domain/tedTypes'
-import {
-    getDefaultTedSampleData,
-    mergeTedSampleData,
-} from '@/features/template-editor/domain/tedSampleData'
-import { TedEntityTabs } from './TedEntityTabs'
+import { useTedMode } from '@/ui/context/TedModeContext'
 import { TemplateLayerAccordion } from './TemplateLayerAccordion'
+import { TedEntityTabs } from './TedEntityTabs'
+import { TedSampleDataPanel } from './TedSampleDataPanel'
 
 type TemplateEditorPanelProps = {
     isTedMode: boolean
-}
-
-type StringInputProps = {
-    label: string
-    value: string
-    onChange: (value: string) => void
-}
-
-function StringInput({ label, value, onChange }: StringInputProps) {
-    return (
-        <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            {label}
-            <input
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                className="rounded border border-gray-300 px-2 py-1 text-sm font-normal text-gray-900"
-            />
-        </label>
-    )
-}
-
-function getSampleFieldLabels(entityType: TedEntityType) {
-    return Object.keys(getDefaultTedSampleData(entityType))
 }
 
 export function TemplateEditorPanel({ isTedMode }: TemplateEditorPanelProps) {
@@ -48,16 +22,16 @@ export function TemplateEditorPanel({ isTedMode }: TemplateEditorPanelProps) {
         resetTemplateToDefault,
         saveTemplates,
     } = useTemplateDocument()
-    const [activeEntityType, setActiveEntityType] = useState<TedEntityType>('titles')
-    const [sampleOverrides, setSampleOverrides] = useState<Record<string, string>>({})
+    const {
+        activeTedEntityType: activeEntityType,
+        setActiveTedEntityType: setActiveEntityType,
+        tedSampleOverrides: sampleOverrides,
+        setTedSampleOverrides: setSampleOverrides,
+    } = useTedMode()
     const [saveError, setSaveError] = useState<string | null>(null)
+    const [saveWarning, setSaveWarning] = useState<string | null>(null)
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
     const template = document.templates[activeEntityType]
-    const sampleData = useMemo(
-        () => mergeTedSampleData(activeEntityType, sampleOverrides),
-        [activeEntityType, sampleOverrides],
-    )
-
     if (!isTedMode) return null
 
     const applyTemplateUpdate = (nextTemplate: BroadcastTemplate) => {
@@ -69,6 +43,7 @@ export function TemplateEditorPanel({ isTedMode }: TemplateEditorPanelProps) {
     const handleSave = async () => {
         setSaveStatus('saving')
         setSaveError(null)
+        setSaveWarning(null)
         const result = await saveTemplates()
 
         if (!result.ok) {
@@ -77,6 +52,7 @@ export function TemplateEditorPanel({ isTedMode }: TemplateEditorPanelProps) {
             return
         }
 
+        setSaveWarning(result.warning ?? null)
         setSaveStatus('saved')
     }
 
@@ -84,6 +60,7 @@ export function TemplateEditorPanel({ isTedMode }: TemplateEditorPanelProps) {
         resetTemplateToDefault(activeEntityType)
         setSaveStatus('idle')
         setSaveError(null)
+        setSaveWarning(null)
     }
 
     return (
@@ -98,6 +75,7 @@ export function TemplateEditorPanel({ isTedMode }: TemplateEditorPanelProps) {
                     setSampleOverrides({})
                     setSaveStatus('idle')
                     setSaveError(null)
+                    setSaveWarning(null)
                 }}
             />
 
@@ -108,33 +86,11 @@ export function TemplateEditorPanel({ isTedMode }: TemplateEditorPanelProps) {
                     </div>
                 )}
 
-                <section className="rounded border bg-white p-3">
-                    <div className="mb-2 text-sm font-semibold text-gray-900">
-                        Sample data
-                    </div>
-                    <div className="grid grid-cols-1 gap-2">
-                        {getSampleFieldLabels(activeEntityType).map((fieldId) => (
-                            <StringInput
-                                key={fieldId}
-                                label={fieldId}
-                                value={sampleOverrides[fieldId] ?? ''}
-                                onChange={(value) => {
-                                    setSampleOverrides((current) => ({
-                                        ...current,
-                                        [fieldId]: value,
-                                    }))
-                                }}
-                            />
-                        ))}
-                    </div>
-                    <div className="mt-2 rounded bg-gray-50 px-2 py-1 text-xs text-gray-600">
-                        {Object.entries(sampleData).map(([key, value]) => (
-                            <div key={key} className="truncate">
-                                {key}: {value}
-                            </div>
-                        ))}
-                    </div>
-                </section>
+                <TedSampleDataPanel
+                    entityType={activeEntityType}
+                    overrides={sampleOverrides}
+                    onOverridesChange={setSampleOverrides}
+                />
 
                 <TemplateLayerAccordion
                     template={template}
@@ -148,6 +104,11 @@ export function TemplateEditorPanel({ isTedMode }: TemplateEditorPanelProps) {
                         {saveError}
                     </div>
                 )}
+                {saveWarning && (
+                    <div className="mb-2 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                        {saveWarning}
+                    </div>
+                )}
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
@@ -159,7 +120,7 @@ export function TemplateEditorPanel({ isTedMode }: TemplateEditorPanelProps) {
                                 : 'bg-gray-400'
                         }`}
                     >
-                        {saveStatus === 'saving' ? 'Saving...' : 'Save'}
+                        {saveStatus === 'saving' ? 'Saving...' : 'Save templates'}
                     </button>
                     <button
                         type="button"

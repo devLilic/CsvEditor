@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
     buildSuggestedPhoneImageFilename,
-    buildPhoneImageCsvValue,
     ensureJpgExtension,
     sanitizeJpegFilename,
 } from './phoneImageFile'
@@ -36,16 +35,6 @@ describe('phoneImageFile', () => {
 
         it('adds jpg extension when missing', () => {
             expect(ensureJpgExtension('ion')).toBe('ion.jpg')
-        })
-    })
-
-    describe('buildPhoneImageCsvValue', () => {
-        it('builds WORK_PATH CSV value', () => {
-            expect(buildPhoneImageCsvValue('ion.jpg')).toBe('WORK_PATH/ion.jpg')
-        })
-
-        it('ensures jpg extension in CSV value', () => {
-            expect(buildPhoneImageCsvValue('poza.png')).toBe('WORK_PATH/poza.jpg')
         })
     })
 

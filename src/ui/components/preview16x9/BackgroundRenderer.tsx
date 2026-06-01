@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { BroadcastBackground } from '@/shared/preview/templateContract'
 
 type BackgroundRendererProps = {
@@ -5,7 +6,13 @@ type BackgroundRendererProps = {
 }
 
 export function BackgroundRenderer({ background }: BackgroundRendererProps) {
-    if (!background) {
+    const [hasImageError, setHasImageError] = useState(false)
+
+    useEffect(() => {
+        setHasImageError(false)
+    }, [background])
+
+    if (!background || (background.type === 'image' && (!background.value.trim() || hasImageError))) {
         return (
             <div
                 aria-hidden="true"
@@ -33,6 +40,7 @@ export function BackgroundRenderer({ background }: BackgroundRendererProps) {
             data-preview-background="image"
             className="absolute inset-0 h-full w-full"
             src={background.value}
+            onError={() => setHasImageError(true)}
             style={{ objectFit: background.objectFit ?? 'cover' }}
             alt=""
         />

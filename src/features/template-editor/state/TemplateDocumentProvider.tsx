@@ -25,7 +25,11 @@ export type EditableTemplateEntityType = keyof TemplateDocumentTemplates
 type SaveTemplatesResult = {
     ok: boolean
     error?: string
+    warning?: string
 }
+
+const DEV_DEFAULT_SAVE_WARNING =
+    'Template-urile au fost salvate local, dar defaultTemplates.oc.json nu a putut fi actualizat.'
 
 export type TemplateDocumentContextValue = {
     document: TemplateDocument
@@ -34,6 +38,7 @@ export type TemplateDocumentContextValue = {
     isDirty: boolean
     updateTemplate(entityType: EditableTemplateEntityType, template: BroadcastTemplate): void
     resetTemplateToDefault(entityType: EditableTemplateEntityType): void
+    discardUnsavedChanges(): void
     saveTemplates(): Promise<SaveTemplatesResult>
     markClean(): void
 }
@@ -108,6 +113,7 @@ export function TemplateDocumentProvider({
     )
     const [defaultDocument, setDefaultDocument] = useState<TemplateDocument>(initialDefaultDocument)
     const [document, setDocument] = useState<TemplateDocument>(initialDefaultDocument)
+    const [cleanDocument, setCleanDocument] = useState<TemplateDocument>(initialDefaultDocument)
     const [isLoaded, setIsLoaded] = useState(false)
     const [isDirty, setIsDirty] = useState(false)
 
@@ -127,6 +133,7 @@ export function TemplateDocumentProvider({
 
             setDefaultDocument(nextDefaultDocument)
             setDocument(nextDocument)
+            setCleanDocument(nextDocument)
             setIsDirty(false)
             setIsLoaded(true)
         }
@@ -164,8 +171,14 @@ export function TemplateDocumentProvider({
     }, [defaultDocument])
 
     const markClean = useCallback(() => {
+        setCleanDocument(clone(document))
         setIsDirty(false)
-    }, [])
+    }, [document])
+
+    const discardUnsavedChanges = useCallback(() => {
+        setDocument(clone(cleanDocument))
+        setIsDirty(false)
+    }, [cleanDocument])
 
     const saveTemplates = useCallback(async (): Promise<SaveTemplatesResult> => {
         const documentToSave = dehydrateRuntimeAssets(document)
@@ -179,12 +192,15 @@ export function TemplateDocumentProvider({
 
         const defaultSaveResult = await templateEditorStorageService.saveDevDefaultTemplateDocument(documentToSave)
         if (!defaultSaveResult.ok) {
+            setCleanDocument(clone(document))
+            setIsDirty(false)
             return {
-                ok: false,
-                error: defaultSaveResult.error,
+                ok: true,
+                warning: DEV_DEFAULT_SAVE_WARNING,
             }
         }
 
+        setCleanDocument(clone(document))
         setIsDirty(false)
         return { ok: true }
     }, [document])
@@ -196,6 +212,7 @@ export function TemplateDocumentProvider({
         isDirty,
         updateTemplate,
         resetTemplateToDefault,
+        discardUnsavedChanges,
         saveTemplates,
         markClean,
     }), [
@@ -205,6 +222,7 @@ export function TemplateDocumentProvider({
         isDirty,
         updateTemplate,
         resetTemplateToDefault,
+        discardUnsavedChanges,
         saveTemplates,
         markClean,
     ])
