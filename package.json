@@ -1,5 +1,5 @@
 {
-  "name": "electron-vite-react",
+  "name": "CsvEditor",
   "version": "3.0.5",
   "main": "dist-electron/main/index.js",
   "description": "Editor de titluri.",

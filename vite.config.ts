@@ -21,6 +21,12 @@ export default defineConfig(({ command }) => {
       },
     },
     plugins: [
+      {
+        name: 'package-name-html-title',
+        transformIndexHtml(html) {
+          return html.replace('%PACKAGE_NAME%', pkg.name)
+        },
+      },
       react(),
       electron({
         main: {

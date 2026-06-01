@@ -1,91 +1,506 @@
-# electron-vite-react
+# CSV Editor — TV Graphics Editor
 
-[![awesome-vite](https://awesome.re/mentioned-badge.svg)](https://github.com/vitejs/awesome-vite)
-![GitHub stars](https://img.shields.io/github/stars/caoxiemeihao/vite-react-electron?color=fa6470)
-![GitHub issues](https://img.shields.io/github/issues/caoxiemeihao/vite-react-electron?color=d8b22d)
-![GitHub license](https://img.shields.io/github/license/caoxiemeihao/vite-react-electron)
-[![Required Node.JS >= 14.18.0 || >=16.0.0](https://img.shields.io/static/v1?label=node&message=14.18.0%20||%20%3E=16.0.0&logo=node.js&color=3f893e)](https://nodejs.org/about/releases)
+Desktop application for editing TV lower-third graphics and exporting CSV data for broadcast systems.
 
-English | [简体中文](README.zh-CN.md)
+Built for television production workflows where graphics are prepared in advance and consumed in real time during live or recorded broadcasts.
 
-## 👀 Overview
+---
 
-📦 Ready out of the box  
-🎯 Based on the official [template-react-ts](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts), project structure will be familiar to you  
-🌱 Easily extendable and customizable  
-💪 Supports Node.js API in the renderer process  
-🔩 Supports C/C++ native addons  
-🐞 Debugger configuration included  
-🖥 Easy to implement multiple windows  
+## Overview
 
-## 🛫 Quick Setup
+CSV Editor is an Electron desktop application used to prepare TV graphics for broadcast.
 
-```sh
-# clone the project
-git clone https://github.com/electron-vite/electron-vite-react.git
+The application allows editors to:
 
-# enter the project directory
-cd electron-vite-react
+* manage TV graphics entities
+* preview graphics in real time (16:9 preview)
+* export broadcast CSV files
+* prepare phone call graphics with images
+* save and restore projects
+* manage multiple shows during the same production day
+* update the application through GitHub Releases
 
-# install dependency
+Current production target:
+
+```txt
+Obiectiv Comun (OC)
+```
+
+---
+
+## Features
+
+### Graphics entities
+
+Supported entity types:
+
+```txt
+- Titles
+- Persons
+- Locations
+- Phone Calls
+```
+
+### Preview16x9
+
+Real-time preview system used to simulate final TV graphics output.
+
+Supports:
+
+```txt
+- text layers
+- image layers
+- shapes
+- backgrounds
+```
+
+### Template Editor (TED)
+
+Advanced template editing mode.
+
+Allows editing:
+
+```txt
+- text positions
+- sizes
+- font settings
+- colors
+- image behavior
+- shape styling
+- backgrounds
+```
+
+Templates are previewed live in Preview16x9.
+
+Template configuration can be saved as JSON.
+
+---
+
+## Tech stack
+
+Built with:
+
+```txt
+Electron
+React
+TypeScript
+Vite
+PapaParse
+Electron Builder
+Electron Updater
+Vitest / Testing Library
+```
+
+---
+
+## Project structure
+
+```txt
+electron/
+  main/              Electron main process
+  preload/           Secure preload bridge
+
+src/
+  components/        UI components
+  features/          Feature modules
+  templates/         Graphics templates
+  shared/            Shared types + IPC
+  state/             App state
+
+public/
+  static assets
+```
+
+---
+
+## Requirements
+
+Install:
+
+```txt
+Node.js 20+
+Git
+npm
+```
+
+Recommended IDE:
+
+```txt
+WebStorm / PhpStorm
+VSCode
+```
+
+---
+
+## Clone repository
+
+```bash
+git clone https://github.com/devLilic/CsvEditor.git
+cd CsvEditor
+```
+
+---
+
+## Install dependencies
+
+Run:
+
+```bash
 npm install
+```
 
-# develop
+---
+
+## Development mode
+
+Start application:
+
+```bash
 npm run dev
 ```
 
-## 🐞 Debug
+This starts:
 
-![electron-vite-react-debug.gif](/electron-vite-react-debug.gif)
-
-## 📂 Directory structure
-
-Familiar React application structure, just with `electron` folder on the top :wink:  
-*Files in this folder will be separated from your React application and built into `dist-electron`*  
-
-```tree
-├── electron                                 Electron-related code
-│   ├── main                                 Main-process source code
-│   └── preload                              Preload-scripts source code
-│
-├── release                                  Generated after production build, contains executables
-│   └── {version}
-│       ├── {os}-{os_arch}                   Contains unpacked application executable
-│       └── {app_name}_{version}.{ext}       Installer for the application
-│
-├── public                                   Static assets
-└── src                                      Renderer source code, your React application
+```txt
+- Vite dev server
+- Electron main process
+- preload build
 ```
 
-<!--
-## 🚨 Be aware
+The app opens automatically.
 
-This template integrates Node.js API to the renderer process by default. If you want to follow **Electron Security Concerns** you might want to disable this feature. You will have to expose needed API by yourself.  
+---
 
-To get started, remove the option as shown below. This will [modify the Vite configuration and disable this feature](https://github.com/electron-vite/vite-plugin-electron-renderer#config-presets-opinionated).
+## Run tests
 
-```diff
-# vite.config.ts
+Run all tests:
 
-export default {
-  plugins: [
-    ...
--   // Use Node.js API in the Renderer-process
--   renderer({
--     nodeIntegration: true,
--   }),
-    ...
-  ],
-}
+```bash
+npm test
 ```
--->
 
-## 🔧 Additional features
+Run watch mode:
 
-1. electron-updater 👉 [see docs](src/components/update/README.md)
-1. playwright
+```bash
+npm run test:watch
+```
 
-## ❔ FAQ
+---
 
-- [C/C++ addons, Node.js modules - Pre-Bundling](https://github.com/electron-vite/vite-plugin-electron-renderer#dependency-pre-bundling)
-- [dependencies vs devDependencies](https://github.com/electron-vite/vite-plugin-electron-renderer#dependencies-vs-devdependencies)
+## Build application
+
+Build renderer + electron:
+
+```bash
+npm run build
+```
+
+---
+
+## Create Windows executable
+
+Create installer:
+
+```bash
+npm run dist:win
+```
+
+Generated files are placed in:
+
+```txt
+dist/
+release/
+or build output directory
+```
+
+(depending on electron-builder configuration)
+
+---
+
+## Application settings
+
+The application stores configuration such as:
+
+```txt
+- working CSV file
+- backup folder
+- saved projects folder
+- phone images folder
+- CSV export folder
+```
+
+Settings are persisted locally.
+
+---
+
+## Working CSV flow
+
+Application works with a single active CSV file.
+
+Example:
+
+```txt
+working.csv
+```
+
+Workflow:
+
+```txt
+1. Edit graphics
+2. Save entities
+3. Application writes CSV
+4. Broadcast system consumes CSV
+```
+
+---
+
+## Entity CSV export
+
+Application exports entity-specific CSV files.
+
+Example:
+
+```txt
+OC_titles.csv
+OC_persons.csv
+OC_locations.csv
+OC_phones.csv
+```
+
+These files are rewritten automatically when entities are changed.
+
+---
+
+## Phone call graphics
+
+Phone calls support:
+
+```txt
+- name
+- role/function
+- photo
+```
+
+Image workflow:
+
+```txt
+upload image
+→ resize
+→ crop
+→ save to WORK_PATH
+→ export real image path to CSV
+```
+
+---
+
+## Saved projects
+
+Application supports:
+
+```txt
+Save Project
+Load Project
+```
+
+Projects are saved as CSV snapshots.
+
+Loading a project restores:
+
+```txt
+working CSV
+entity exports
+preview state
+```
+
+---
+
+## Automatic backup
+
+When creating a new project:
+
+```txt
+1. current working CSV is backed up
+2. default project content is restored
+```
+
+Backups are timestamped.
+
+Example:
+
+```txt
+2026-06-01_18-30-44.csv
+```
+
+Backup retention:
+
+```txt
+last 10 files
+```
+
+---
+
+## Template system
+
+Templates exist in three layers.
+
+Priority:
+
+```txt
+1. user template override
+2. bundled default template JSON
+3. hardcoded fallback templates
+```
+
+Files:
+
+```txt
+src/templates/broadcast/defaultTemplates.oc.json
+```
+
+User templates:
+
+```txt
+userData/templates/ocTemplates.json
+```
+
+---
+
+## Application update system
+
+Application supports updates through GitHub Releases.
+
+Update flow:
+
+```txt
+Settings
+→ Check for updates
+→ Download
+→ Install
+```
+
+Release artifacts:
+
+```txt
+Setup.exe
+latest.yml
+.blockmap
+```
+
+---
+
+## Release process
+
+### 1. Switch to production branch
+
+```bash
+git switch version_Obiectiv_Comun
+git pull origin version_Obiectiv_Comun
+```
+
+### 2. Validate build
+
+```bash
+npm test
+npm run build
+npm run dist:win
+```
+
+### 3. Create new version
+
+Patch version:
+
+```bash
+npm version patch
+```
+
+Minor version:
+
+```bash
+npm version minor
+```
+
+Major version:
+
+```bash
+npm version major
+```
+
+### 4. Push branch + tag
+
+```bash
+git push origin version_Obiectiv_Comun --follow-tags
+```
+
+GitHub Actions will:
+
+```txt
+- build installer
+- generate release assets
+- publish GitHub Release
+```
+
+---
+
+## Git workflow
+
+Feature development:
+
+```bash
+git switch version_Obiectiv_Comun
+git pull origin version_Obiectiv_Comun
+
+git checkout -b feature/my-feature
+```
+
+Merge feature:
+
+```bash
+git switch version_Obiectiv_Comun
+git merge feature/my-feature
+```
+
+Push:
+
+```bash
+git push origin version_Obiectiv_Comun
+```
+
+---
+
+## Important notes
+
+### Production branch
+
+Current production branch:
+
+```txt
+version_Obiectiv_Comun
+```
+
+### Auto update
+
+Never reuse versions.
+
+Always increment version before release:
+
+```txt
+3.0.3 → 3.0.4
+```
+
+### Build validation
+
+Before publishing:
+
+```bash
+npm test
+npm run build
+npm run dist:win
+```
+
+---
+
+## License
+
+Internal/private project.
+
+Not intended for public redistribution.
